@@ -1,188 +1,221 @@
 'use client';
 
+import { useMemo } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Legend, Cell, PieChart, Pie
+  TrendingUp, TrendingDown, DollarSign, Target,
+  Users, Activity, Wallet, ArrowUpRight, ArrowDownRight,
+  Filter, Calendar, Download, RefreshCw, BarChart2,
+  PieChart as PieIcon, LayoutDashboard, Building2
+} from 'lucide-react';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie
 } from 'recharts';
-import MetricCard from '@/components/dashboard/MetricCard';
-import Gauge from '@/components/dashboard/Gauge';
-import { AlertTriangle, TrendingUp, TrendingDown, Wallet, Clock, Zap } from 'lucide-react';
+import { useGlobalFilters } from '@/contexts/GlobalFilterContext';
 
-const cashFlowData = [
-  { name: 'Set', previsto: 4000, realizado: 3800 },
-  { name: 'Out', previsto: 4500, realizado: 4200 },
-  { name: 'Nov', previsto: 4200, realizado: 4600 },
-  { name: 'Dez', previsto: 5000, realizado: 4900 },
-  { name: 'Jan', previsto: 4800, realizado: 5100 },
-  { name: 'Fev', previsto: 5200, realizado: 4800 },
+// --- MOCK DATA ---
+
+const PERFORMANCE_DATA = [
+  { month: 'Jan', orçado: 400000, realizado: 380000 },
+  { month: 'Fev', orçado: 420000, realizado: 410000 },
+  { month: 'Mar', orçado: 450000, realizado: 480000 },
+  { month: 'Abr', orçado: 430000, realizado: 415000 },
+  { month: 'Mai', orçado: 480000, realizado: 500000 },
+  { month: 'Jun', orçado: 510000, realizado: 490000 },
 ];
 
-const revenueBySource = [
-  { name: 'Mensalidades', value: 280000 },
-  { name: 'Doações', value: 120000 },
-  { name: 'Eventos', value: 45000 },
-  { name: 'Vendas', value: 32000 },
+const REVENUE_BY_FRONT = [
+  { name: 'PAIDEIA', value: 350000, color: 'var(--primary)' },
+  { name: 'OIKOS', value: 120000, color: 'var(--secondary)' },
+  { name: 'BIBLOS', value: 85000, color: '#FFD600' },
 ];
 
-const expenseByCategory = [
-  { name: 'Pessoal', value: 180000, color: '#2979FF' },
-  { name: 'Infra', value: 65000, color: '#FFAB00' },
-  { name: 'Marketing', value: 34000, color: '#00E676' },
-  { name: 'Operacional', value: 42000, color: '#FF1744' },
+const EXPENSE_CATEGORIES = [
+  { category: 'Pessoal', value: 45 },
+  { category: 'Pedagógico', value: 25 },
+  { category: 'Infra', value: 15 },
+  { category: 'Marketing', value: 10 },
+  { category: 'Outros', value: 5 },
 ];
 
-export default function Home() {
+export default function DashboardExecutivo() {
+  const { filters, user } = useGlobalFilters();
+
+  const metrics = useMemo(() => ({
+    receitaTotal: 580000,
+    receitaVariancia: +4.2,
+    despesaTotal: 415000,
+    despesaVariancia: -1.8,
+    ebitda: 165000,
+    ebitdaMargem: 28.4,
+    freetCashFlow: 92000,
+    execucaoOrcamentaria: 94.5
+  }), []);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
-      {/* 1. Header & Summary Stats */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      {/* 1. Header & Context */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 className="text-h1">Dashboard Executivo</h1>
-          <p className="text-body">Visão consolidada do ecossistema financeiro</p>
+          <h1 className="text-h1">Consolidado Executivo</h1>
+          <p className="text-body">Visão 360º da Saúde Financeira — {filters.front}</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <div className="card" style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Zap size={18} color="var(--warning)" />
-            <div style={{ lineHeight: 1 }}>
-              <p style={{ fontSize: '10px', color: 'var(--text-disabled)', textTransform: 'uppercase' }}>Runway Estimado</p>
-              <p style={{ fontSize: '16px', fontWeight: 'bold' }}>14 Meses</p>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '8px 16px', borderRadius: '12px', border: '1px solid #1A1A1A' }}>
+            <Activity size={14} color="var(--success)" className="animate-pulse" />
+            <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>Live Data</span>
           </div>
-          <div className="card" style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Clock size={18} color="var(--secondary)" />
-            <div style={{ lineHeight: 1 }}>
-              <p style={{ fontSize: '10px', color: 'var(--text-disabled)', textTransform: 'uppercase' }}>Burn Rate (Avg)</p>
-              <p style={{ fontSize: '16px', fontWeight: 'bold' }}>R$ 42.5k</p>
-            </div>
-          </div>
+          <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Download size={18} /> Exportar Board
+          </button>
         </div>
       </div>
 
-      {/* 2. KPI Cards Row */}
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
-        <MetricCard title="Receita Realizada (Mês)" value="R$ 457.2k" trend={5.2} trendLabel="vs meta" />
-        <MetricCard title="Receita Realizada (YTD)" value="R$ 2.8M" trend={8.1} trendLabel="vs 2024" />
-        <MetricCard title="Despesa Realizada (Mês)" value="R$ 382.1k" trend={-2.4} trendLabel="vs orçado" isPositive={false} />
-        <MetricCard title="Caixa Atual" value="R$ 1.15M" trend={1.5} trendLabel="Liquidez imediata" />
+      {/* 2. Key Performance Indicators (Cards) */}
+      <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+        <MetricCard
+          label="Receita Operacional"
+          value={`R$ ${metrics.receitaTotal.toLocaleString()}`}
+          trend={metrics.receitaVariancia}
+          icon={<TrendingUp size={18} />}
+          color="var(--primary)"
+        />
+        <MetricCard
+          label="Despesa Consolidada"
+          value={`R$ ${metrics.despesaTotal.toLocaleString()}`}
+          trend={metrics.despesaVariancia}
+          icon={<TrendingDown size={18} />}
+          color="var(--danger)"
+          inverseTrend
+        />
+        <MetricCard
+          label="EBITDA (Gerencial)"
+          value={`R$ ${metrics.ebitda.toLocaleString()}`}
+          sublabel={`${metrics.ebitdaMargem}% Margem`}
+          icon={<Activity size={18} />}
+          color="var(--secondary)"
+        />
+        <MetricCard
+          label="Execução Orçamentária"
+          value={`${metrics.execucaoOrcamentaria}%`}
+          sublabel="Dentro do Limite"
+          icon={<Target size={18} />}
+          color="#FFD600"
+        />
       </div>
 
-      {/* 3. Thermometers Section */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <h3 className="text-h3">Termômetros de Execução</h3>
-        <div style={{ display: 'flex', gap: '24px' }}>
-          <Gauge title="Arrecadação vs Meta (Mês)" value={94} label="R$ 457k / R$ 480k" color="var(--primary)" />
-          <Gauge title="Gastos vs Orçado (Mês)" value={82} label="R$ 382k / R$ 465k" color="var(--secondary)" />
-          <div className="card" style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h4 style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>Execução por Frente (%)</h4>
-            <div style={{ display: 'flex', gap: '20px' }}>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '11px', marginBottom: '8px', color: 'var(--text-disabled)' }}>Paideia</p>
-                <div style={{ height: '6px', background: '#222', borderRadius: '3px' }}><div style={{ width: '88%', height: '100%', background: 'var(--secondary)', borderRadius: '3px' }}></div></div>
-                <p style={{ fontSize: '12px', marginTop: '4px', fontWeight: 'bold' }}>88%</p>
-              </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '11px', marginBottom: '8px', color: 'var(--text-disabled)' }}>Oikos</p>
-                <div style={{ height: '6px', background: '#222', borderRadius: '3px' }}><div style={{ width: '72%', height: '100%', background: 'var(--warning)', borderRadius: '3px' }}></div></div>
-                <p style={{ fontSize: '12px', marginTop: '4px', fontWeight: 'bold' }}>72%</p>
-              </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '11px', marginBottom: '8px', color: 'var(--text-disabled)' }}>Biblos</p>
-                <div style={{ height: '6px', background: '#222', borderRadius: '3px' }}><div style={{ width: '95%', height: '100%', background: 'var(--success)', borderRadius: '3px' }}></div></div>
-                <p style={{ fontSize: '12px', marginTop: '4px', fontWeight: 'bold' }}>95%</p>
-              </div>
+      {/* 3. Main Charts Area */}
+      <div className="grid" style={{ gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+
+        {/* Trend Chart */}
+        <div className="card" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+            <div>
+              <h3 style={{ fontSize: '16px', fontWeight: 700 }}>Performance Real v Planned</h3>
+              <p style={{ fontSize: '12px', color: 'var(--text-disabled)' }}>Comparativo de competência acumulada</p>
+            </div>
+            <div style={{ display: 'flex', gap: '16px', fontSize: '11px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', background: 'var(--primary)', borderRadius: '2px' }} /> Realizado</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px' }} /> Orçado</div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* 4. Main Charts Grid */}
-      <div className="grid" style={{ gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
-
-        {/* Fluxo de Caixa Previsto x Realizado */}
-        <div className="card">
-          <h3 className="text-h3" style={{ marginBottom: '24px' }}>Fluxo de Caixa: Previsto x Realizado</h3>
           <div style={{ height: '300px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={cashFlowData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                <XAxis dataKey="name" stroke="#555" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#555" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$ ${value}`} />
+              <AreaChart data={PERFORMANCE_DATA}>
+                <defs>
+                  <linearGradient id="colorReal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
+                <XAxis dataKey="month" stroke="#444" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="#444" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `R$ ${val / 1000}k`} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#1A1A1A', border: '1px solid #333', borderRadius: '8px' }}
-                  itemStyle={{ fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#090909', border: '1px solid #222', borderRadius: '8px', fontSize: '12px' }}
+                  itemStyle={{ color: 'white' }}
                 />
-                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                <Line type="monotone" dataKey="realizado" stroke="var(--primary)" strokeWidth={3} dot={{ fill: 'var(--primary)', r: 4 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="previsto" stroke="#444" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-              </LineChart>
+                <Area type="monotone" dataKey="orçado" stroke="#333" fill="rgba(255,255,255,0.02)" strokeWidth={2} />
+                <Area type="monotone" dataKey="realizado" stroke="var(--primary)" fillOpacity={1} fill="url(#colorReal)" strokeWidth={3} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Receita por Modalidade */}
-        <div className="card">
-          <h3 className="text-h3" style={{ marginBottom: '24px' }}>Receita por Fonte</h3>
-          <div style={{ height: '300px', width: '100%' }}>
+        {/* Distribution Chart */}
+        <div className="card" style={{ padding: '24px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '24px' }}>Receita por Frente</h3>
+          <div style={{ height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={revenueBySource} layout="vertical">
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" stroke="#AAA" fontSize={11} width={80} tickLine={false} axisLine={false} />
-                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1A1A1A', border: '1px solid #333' }} />
-                <Bar dataKey="value" fill="var(--secondary)" radius={[0, 4, 4, 0]} barSize={20}>
-                  {revenueBySource.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === 0 ? 'var(--primary)' : 'var(--secondary)'} opacity={1 - index * 0.2} />
+              <PieChart>
+                <Pie
+                  data={REVENUE_BY_FRONT}
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={8}
+                  dataKey="value"
+                >
+                  {REVENUE_BY_FRONT.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                   ))}
-                </Bar>
-              </BarChart>
+                </Pie>
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#090909', border: '1px solid #222', borderRadius: '8px', fontSize: '12px' }}
+                />
+              </PieChart>
             </ResponsiveContainer>
+            <div style={{ position: 'absolute', textAlign: 'center' }}>
+              <p style={{ fontSize: '10px', color: 'var(--text-disabled)', textTransform: 'uppercase' }}>Total</p>
+              <p style={{ fontSize: '18px', fontWeight: 'bold' }}>R$ 555k</p>
+            </div>
+          </div>
+          <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {REVENUE_BY_FRONT.map(item => (
+              <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                  <div style={{ width: '8px', height: '8px', background: item.color, borderRadius: '2px' }} />
+                  {item.name}
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>R$ {(item.value / 1000).toFixed(0)}k</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* 5. Alerts & Categories Bottom Row */}
-      <div className="grid" style={{ gridTemplateColumns: '1.2fr 1.8fr', gap: '32px' }}>
+      {/* 4. Secondary Breakdown & Alerts */}
+      <div className="grid" style={{ gridTemplateColumns: '1.2fr 1.8fr', gap: '24px' }}>
 
-        {/* Painel de Alertas */}
-        <div className="card" style={{ borderLeft: '4px solid var(--warning)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-            <AlertTriangle size={20} color="var(--warning)" />
-            <h3 className="text-h3">Alertas de Controladoria</h3>
+        <div className="card" style={{ padding: '24px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '20px' }}>Composição de Despesas</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {EXPENSE_CATEGORIES.map(ex => (
+              <div key={ex.category}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '11px' }}>
+                  <span>{ex.category}</span>
+                  <span style={{ color: 'var(--text-disabled)' }}>{ex.value}%</span>
+                </div>
+                <div style={{ height: '4px', background: '#111', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div style={{ width: ex.value + '%', height: '100%', background: 'var(--secondary)' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <button className="btn btn-ghost" style={{ width: '100%', marginTop: '24px', fontSize: '11px', border: '1px solid #1A1A1A' }}>
+            Ver Drilldown Analítico <ArrowUpRight size={12} style={{ marginLeft: 6 }} />
+          </button>
+        </div>
+
+        <div className="card" style={{ padding: '24px', borderLeft: '4px solid var(--warning)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 700 }}>Alertas de Controladoria (High Risk)</h3>
+            <span style={{ fontSize: '10px', background: 'rgba(255,171,0,0.1)', color: 'var(--warning)', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>3 Pendentes</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <AlertItem icon={<TrendingDown size={14} />} text="Receitas Paideia abaixo de 12% do previsto" color="var(--danger)" />
-            <AlertItem icon={<Wallet size={14} />} text="Centro de Custo 'Marketing' acima de 105% do orçado" color="var(--warning)" />
-            <AlertItem icon={<Clock size={14} />} text="Contas a receber vencidas: R$ 12.430 (Frente Oikos)" color="var(--danger)" />
-            <AlertItem icon={<Zap size={14} />} text="Concentração: Mensalidades representam 62% da receita" color="var(--secondary)" />
-          </div>
-        </div>
-
-        {/* Despesas por Categoria */}
-        <div className="card">
-          <h3 className="text-h3" style={{ marginBottom: '20px' }}>Despesa por Categoria</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'center' }}>
-            <div style={{ height: '180px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart padding={{ top: 0, bottom: 0 }}>
-                  <Pie data={expenseByCategory} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                    {expenseByCategory.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {expenseByCategory.map((item, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color }} />
-                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{item.name}</span>
-                  </div>
-                  <span style={{ fontSize: '13px', fontWeight: 600 }}>R$ {(item.value / 1000).toFixed(1)}k</span>
-                </div>
-              ))}
-            </div>
+            <AlertRow title="Estouro de Orçamento: Marketing PAIDEIA" desc="Superou +15% do orçado para o Q1 devido a Google Ads." />
+            <AlertRow title="Inadimplência Projetada (+5%)" desc="Previsão de aumento em Biblos Educação devido a atrasos bancários." />
+            <AlertRow title="Empenho s/ Justificativa" desc="Solicitação EMP-088 aguardando documento de suporte." />
           </div>
         </div>
 
@@ -192,19 +225,42 @@ export default function Home() {
   );
 }
 
-function AlertItem({ icon, text, color }: { icon: any, text: string, color: string }) {
+function MetricCard({ label, value, trend, sublabel, icon, color, inverseTrend }: any) {
+  const isPositive = trend > 0;
+  const trendColor = inverseTrend
+    ? (isPositive ? 'var(--danger)' : 'var(--success)')
+    : (isPositive ? 'var(--success)' : 'var(--danger)');
+
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      padding: '12px',
-      borderRadius: '8px',
-      backgroundColor: 'rgba(255,255,255,0.03)',
-      fontSize: '13px'
-    }}>
-      <div style={{ color }}>{icon}</div>
-      <span style={{ color: 'var(--text-primary)' }}>{text}</span>
+    <div className="card" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: `${color}10`, color: color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {icon}
+        </div>
+        {trend && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 'bold', color: trendColor }}>
+            {isPositive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+            {Math.abs(trend)}%
+          </div>
+        )}
+      </div>
+      <p style={{ fontSize: '11px', color: 'var(--text-disabled)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>{label}</p>
+      <h2 style={{ fontSize: '24px', fontWeight: 900, marginTop: '4px' }}>{value}</h2>
+      {sublabel && <p style={{ fontSize: '11px', color: 'var(--text-disabled)', marginTop: '4px' }}>{sublabel}</p>}
+
+      {/* Background Decoration */}
+      <div style={{ position: 'absolute', right: '-10px', bottom: '-10px', opacity: 0.03, color: color }}>
+        {icon && <div style={{ transform: 'scale(4)' }}>{icon}</div>}
+      </div>
+    </div>
+  );
+}
+
+function AlertRow({ title, desc }: any) {
+  return (
+    <div style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', borderRadius: '8px', border: '1px solid #1A1A1A' }}>
+      <p style={{ fontSize: '12px', fontWeight: 700, marginBottom: '2px' }}>{title}</p>
+      <p style={{ fontSize: '11px', color: 'var(--text-disabled)' }}>{desc}</p>
     </div>
   );
 }

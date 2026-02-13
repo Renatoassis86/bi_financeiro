@@ -8,6 +8,7 @@ import {
     PieChart,
     ArrowRightLeft,
     Layers,
+    ShoppingCart,
     Target,
     Table,
     LineChart,
@@ -19,7 +20,6 @@ import {
     Settings,
     Briefcase,
     Plus,
-    Target as TargetIcon,
     BarChart3
 } from 'lucide-react';
 
@@ -31,6 +31,7 @@ const MENU_ITEMS = [
     { name: 'Plan. Tático', path: '/orcamento/planejamento-tatico', icon: Table },
     { name: 'Remanejamento', path: '/orcamento/remanejamento', icon: ArrowRightLeft },
     { name: 'Empenho', path: '/empenho', icon: Briefcase },
+    { name: 'Suprimentos', path: '/compras', icon: ShoppingCart },
     { name: 'Cadastros', path: '/cadastros', icon: Users },
     { name: 'Alertas', path: '/alertas', icon: Bell },
     { name: 'Forecast', path: '/forecast', icon: LineChart },
@@ -65,8 +66,8 @@ export function Sidebar() {
                             key={item.path}
                             href={item.path}
                             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${isActive
-                                ? 'bg-primary/10 text-primary shadow-sm shadow-primary/5'
-                                : 'text-gray-400 hover:bg-white/[0.03] hover:text-white'
+                                    ? 'bg-primary/10 text-primary shadow-sm shadow-primary/5'
+                                    : 'text-gray-400 hover:bg-white/[0.03] hover:text-white'
                                 }`}
                         >
                             <item.icon size={20} className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
