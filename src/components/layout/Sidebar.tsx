@@ -19,7 +19,8 @@ import {
     Settings,
     Briefcase,
     Plus,
-    Target as TargetIcon
+    Target as TargetIcon,
+    BarChart3
 } from 'lucide-react';
 
 const MENU_ITEMS = [
@@ -35,6 +36,7 @@ const MENU_ITEMS = [
     { name: 'Forecast', path: '/forecast', icon: LineChart },
     { name: 'Importação', path: '/importacao', icon: Upload },
     { name: 'Segurança', path: '/seguranca', icon: Shield },
+    { name: 'Glossário BI', path: '/bi', icon: BarChart3 },
     { name: 'Relatórios', path: '/relatorios', icon: FileText },
 ];
 
@@ -63,8 +65,8 @@ export function Sidebar() {
                             key={item.path}
                             href={item.path}
                             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${isActive
-                                    ? 'bg-primary/10 text-primary shadow-sm shadow-primary/5'
-                                    : 'text-gray-400 hover:bg-white/[0.03] hover:text-white'
+                                ? 'bg-primary/10 text-primary shadow-sm shadow-primary/5'
+                                : 'text-gray-400 hover:bg-white/[0.03] hover:text-white'
                                 }`}
                         >
                             <item.icon size={20} className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
