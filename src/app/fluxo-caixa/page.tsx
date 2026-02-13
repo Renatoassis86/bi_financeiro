@@ -1,0 +1,1 @@
+﻿export default function Page() { return <div style={{ padding: '24px' }}><h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px' }}>fluxo-caixa</h1><p style={{ color: 'var(--text-secondary)' }}>Módulo em desenvolvimento.</p></div> }
