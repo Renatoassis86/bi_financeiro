@@ -5,7 +5,8 @@ import {
     Plus, Search, Filter, Download, MoreHorizontal,
     ArrowUpRight, Calendar, Bookmark, Building2, User,
     CheckCircle2, Clock, AlertCircle, PieChart, BarChart3,
-    FileSpreadsheet, CreditCard, LayoutGrid, Package
+    FileSpreadsheet, CreditCard, LayoutGrid, Package,
+    UploadCloud, X, ChevronRight, Info
 } from 'lucide-react';
 import {
     PieChart as RechartsPie, Pie, Cell, ResponsiveContainer,
@@ -41,17 +42,6 @@ const RECENT_REVENUES = [
     },
     {
         id: 2,
-        descricao: 'Doação Individual - Oikos',
-        cliente: 'Marcos Oliveira',
-        modalidade: 'DOAÇÃO',
-        produto: 'Fundo Social',
-        frente: 'OIKOS',
-        valor: 500.00,
-        vencimento: '12/02/2026',
-        status: 'RECEBIDO'
-    },
-    {
-        id: 3,
         descricao: 'Ingresso Conferência Biblos',
         cliente: 'João Pereira',
         modalidade: 'EVENTO',
@@ -64,253 +54,232 @@ const RECENT_REVENUES = [
 ];
 
 export default function ReceitasPage() {
-    const [showNewEntry, setShowNewEntry] = useState(false);
+    const [activeSidePanel, setActiveSidePanel] = useState<'NEW' | 'IMPORT' | null>(null);
+    const [billingType, setBillingType] = useState<'UNICA' | 'PARCELADA' | 'RECORRENTE'>('UNICA');
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
-            {/* Header & Main Actions */}
+            {/* 1. Header & Quick Actions */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                     <h1 className="text-h1">Gestão de Receitas</h1>
-                    <p className="text-body">Monitoramento de faturamento por modalidade, produto e frente</p>
+                    <p className="text-body">Faturamento por modalidade, produto e frente de trabalho</p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                    <button className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <FileSpreadsheet size={16} /> Importar Planilha
+                    <button onClick={() => setActiveSidePanel('IMPORT')} className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <FileSpreadsheet size={16} /> Importar Recebíveis
                     </button>
-                    <button onClick={() => setShowNewEntry(true)} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button onClick={() => { setActiveSidePanel('NEW'); setBillingType('UNICA'); }} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Plus size={18} /> Novo Lançamento
                     </button>
                 </div>
             </div>
 
-            {/* Analytics Section */}
+            {/* 2. Analytics Dashboard Tier */}
             <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '24px' }}>
-                {/* Revenue Mix */}
                 <div className="card">
-                    <h3 className="text-h3" style={{ fontSize: '14px', marginBottom: '20px' }}>Mix de Receita (Modalidade)</h3>
-                    <div style={{ height: '200px' }}>
+                    <h3 className="text-h3" style={{ fontSize: '14px', marginBottom: '20px' }}>Mix de Faturamento</h3>
+                    <div style={{ height: '180px' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <RechartsPie>
-                                <Pie
-                                    data={REVENUE_MIX}
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {REVENUE_MIX.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                    ))}
+                                <Pie data={REVENUE_MIX} innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
+                                    {REVENUE_MIX.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                                 </Pie>
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#111', border: '1px solid #333', fontSize: '12px' }}
-                                    formatter={(value: number) => `R$ ${value.toLocaleString()}`}
-                                />
+                                <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333', fontSize: '11px' }} />
                             </RechartsPie>
                         </ResponsiveContainer>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '16px' }}>
-                        {REVENUE_MIX.map((item, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
-                                <div style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: item.color }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px' }}>
+                        {REVENUE_MIX.slice(0, 4).map((item, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '10px' }}>
+                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: item.color }} />
                                 <span style={{ color: 'var(--text-secondary)' }}>{item.name}</span>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Top Products */}
                 <div className="card">
-                    <h3 className="text-h3" style={{ fontSize: '14px', marginBottom: '20px' }}>Top Produtos / Serviços</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <h3 className="text-h3" style={{ fontSize: '14px', marginBottom: '20px' }}>Top Produtos (Performance)</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         {TOP_PRODUCTS.map((prod, i) => (
                             <div key={i}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                    <span style={{ fontSize: '12px', fontWeight: 600 }}>{prod.name}</span>
-                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>R$ {prod.total.toLocaleString()}</span>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '11px' }}>
+                                    <span style={{ fontWeight: 600 }}>{prod.name}</span>
+                                    <span style={{ color: 'var(--primary)' }}>R$ {prod.total.toLocaleString()}</span>
                                 </div>
-                                <div style={{ height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
-                                    <div style={{
-                                        width: `${(prod.total / 400000) * 100}%`,
-                                        height: '100%',
-                                        backgroundColor: i === 0 ? 'var(--primary)' : 'var(--secondary)'
-                                    }} />
+                                <div style={{ height: '4px', background: '#222', borderRadius: '2px' }}>
+                                    <div style={{ width: `${(prod.total / 400000) * 100}%`, height: '100%', backgroundColor: 'var(--primary)', opacity: 1 - i * 0.2 }} />
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Delinquency & Health */}
-                <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '24px' }}>
-                    <div>
-                        <p style={{ fontSize: '11px', color: 'var(--text-disabled)', textTransform: 'uppercase', marginBottom: '4px' }}>Inadimplência (Vencidos)</p>
-                        <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--danger)' }}>R$ 12.450</h2>
-                        <p style={{ fontSize: '11px', color: 'var(--danger)', marginTop: '4px' }}>↑ 4.2% em relação ao mês anterior</p>
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', borderLeft: '4px solid var(--danger)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <AlertCircle size={14} color="var(--danger)" />
+                        <span style={{ fontSize: '11px', color: 'var(--text-disabled)', textTransform: 'uppercase' }}>Créditos em Atraso</span>
                     </div>
-                    <div style={{ width: '100%', height: '1px', backgroundColor: '#333' }} />
-                    <div>
-                        <p style={{ fontSize: '11px', color: 'var(--text-disabled)', textTransform: 'uppercase', marginBottom: '4px' }}>Taxa de Recompra / Recorrência</p>
-                        <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--success)' }}>84.2%</h2>
-                        <p style={{ fontSize: '11px', color: 'var(--success)', marginTop: '4px' }}>Alvo: 80%</p>
-                    </div>
+                    <h2 style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--danger)' }}>R$ 12.450</h2>
+                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                        <span style={{ color: 'var(--danger)', fontWeight: 'bold' }}>↑ 12%</span> em relação à meta de adimplência.
+                    </p>
+                    <button className="btn btn-ghost" style={{ marginTop: '16px', fontSize: '11px', width: 'fit-content', border: '1px solid #333' }}>Ver Relatório de Cobrança</button>
                 </div>
             </div>
 
-            {/* Main Grid & Filters */}
+            {/* 3. Filter & List Tier */}
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', gap: '16px', flex: 1 }}>
-                        <div style={{ position: 'relative', maxWidth: '300px', width: '100%' }}>
-                            <input
-                                placeholder="Pesquisar faturamento..."
-                                className="input-search"
-                                style={{ width: '100%', background: '#0A0A0A', border: '1px solid #333', padding: '8px 12px 8px 36px', borderRadius: '8px', color: 'white', fontSize: '14px' }}
-                            />
-                            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
-                        </div>
-                        <select style={{ background: '#0A0A0A', border: '1px solid #333', color: 'var(--text-secondary)', padding: '0 12px', borderRadius: '8px', fontSize: '13px' }}>
-                            <option>Todas as Frentes</option>
-                            <option>PAIDEIA</option>
-                            <option>OIKOS</option>
-                            <option>BIBLOS</option>
-                        </select>
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', gap: '16px' }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                        <input placeholder="Buscar por cliente ou produto..." style={inputStyle} />
+                        <Search size={14} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
                     </div>
-                    <button className="btn btn-ghost" style={{ border: '1px solid #333', fontSize: '13px' }}>
-                        <Filter size={14} style={{ marginRight: '8px' }} /> Ordenar por Vencimento
-                    </button>
+                    <button className="btn btn-ghost" style={{ border: '1px solid #333' }}><Filter size={16} /></button>
                 </div>
 
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                     <thead>
-                        <tr style={{ background: 'rgba(255,255,255,0.01)', color: 'var(--text-disabled)', textTransform: 'uppercase', fontSize: '11px' }}>
-                            <th style={{ padding: '16px 24px' }}>Favorecido / Descrição</th>
-                            <th style={{ padding: '16px' }}>Modalidade</th>
+                        <tr style={{ background: 'rgba(255,255,255,0.01)', color: 'var(--text-disabled)', fontSize: '11px', textTransform: 'uppercase' }}>
+                            <th style={{ padding: '16px 24px' }}>Cliente / Documento</th>
                             <th style={{ padding: '16px' }}>Produto</th>
                             <th style={{ padding: '16px' }}>Frente</th>
-                            <th style={{ padding: '16px', textAlign: 'right' }}>Valor</th>
+                            <th style={{ padding: '16px', textAlign: 'right' }}>Valor Bruto</th>
+                            <th style={{ padding: '16px', textAlign: 'center' }}>Vencimento</th>
                             <th style={{ padding: '16px', textAlign: 'center' }}>Status</th>
-                            <th style={{ padding: '16px 24px', width: '40px' }}></th>
+                            <th style={{ padding: '16px 24px' }}></th>
                         </tr>
                     </thead>
                     <tbody>
                         {RECENT_REVENUES.map(entry => (
-                            <tr key={entry.id} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background 0.2s' }}>
+                            <tr key={entry.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                                 <td style={{ padding: '16px 24px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{ background: '#111', padding: '8px', borderRadius: '8px', color: 'var(--primary)' }}>
-                                            <User size={16} />
-                                        </div>
-                                        <div>
-                                            <p style={{ fontWeight: 600 }}>{entry.cliente}</p>
-                                            <p style={{ fontSize: '11px', color: 'var(--text-disabled)' }}>{entry.descricao}</p>
-                                        </div>
+                                    <p style={{ fontWeight: 600 }}>{entry.cliente}</p>
+                                    <p style={{ fontSize: '11px', color: 'var(--text-disabled)' }}>{entry.descricao}</p>
+                                </td>
+                                <td style={{ padding: '16px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Package size={14} opacity={0.5} />
+                                        {entry.produto}
                                     </div>
                                 </td>
                                 <td style={{ padding: '16px' }}>
-                                    <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{entry.modalidade}</span>
+                                    <span className={`badge badge-${entry.frente.toLowerCase()}`}>{entry.frente}</span>
                                 </td>
-                                <td style={{ padding: '16px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <Package size={14} color="var(--primary)" />
-                                        <span>{entry.produto}</span>
-                                    </div>
-                                </td>
-                                <td style={{ padding: '16px' }}>
-                                    <span className={`badge badge-${entry.frente.toLowerCase()}`} style={{ fontSize: '10px' }}>{entry.frente}</span>
-                                </td>
-                                <td style={{ padding: '16px', textAlign: 'right', fontWeight: 'bold' }}>
-                                    R$ {entry.valor.toLocaleString()}
-                                </td>
+                                <td style={{ padding: '16px', textAlign: 'right', fontWeight: 'bold' }}>R$ {entry.valor.toLocaleString()}</td>
+                                <td style={{ padding: '16px', textAlign: 'center', color: 'var(--text-secondary)' }}>{entry.vencimento}</td>
                                 <td style={{ padding: '16px', textAlign: 'center' }}>
                                     <StatusLabel status={entry.status} />
                                 </td>
-                                <td style={{ padding: '16px 24px' }}>
-                                    <MoreHorizontal size={18} style={{ color: '#555', cursor: 'pointer' }} />
-                                </td>
+                                <td style={{ padding: '16px 24px' }}><MoreHorizontal size={18} color="#444" /></td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
 
-            {/* Side Panel for New Entry / Faturamento */}
-            {showNewEntry && (
-                <div style={{
-                    position: 'fixed', right: 0, top: 0, bottom: 0, width: '480px',
-                    backgroundColor: '#0A0A0A', borderLeft: '1px solid #333', zIndex: 1000,
-                    padding: '40px', boxShadow: '-24px 0 48px rgba(0,0,0,0.6)'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+            {/* 4. Side Panel: NEW ENTRY / FATURAMENTO */}
+            {activeSidePanel === 'NEW' && (
+                <div style={sidePanelBaseStyle}>
+                    <div style={sidePanelHeader}>
                         <h2 className="text-h2">Novo Faturamento</h2>
-                        <button onClick={() => setShowNewEntry(false)} className="btn btn-ghost">X</button>
+                        <button onClick={() => setActiveSidePanel(null)}><X size={20} /></button>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         <div>
-                            <label style={labelStyle}>Modalidade de Entrada</label>
-                            <select style={inputStyle}>
-                                <option>Assinatura (Recorrente)</option>
-                                <option>Venda Avulsa</option>
-                                <option>Doação</option>
-                                <option>Parceria / Patrocínio</option>
-                                <option>Licenciamento</option>
-                            </select>
-                        </div>
-
-                        <div>
                             <label style={labelStyle}>Cliente / Favorecido</label>
-                            <input placeholder="Digite o nome..." style={inputStyle} />
+                            <input placeholder="Procure por nome ou CPF..." style={inputStyle} />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                             <div>
-                                <label style={labelStyle}>Produto / Serviço</label>
-                                <select style={inputStyle}>
-                                    <option>Mensalidade Escolar</option>
-                                    <option>Curso Liderança</option>
-                                    <option>Evento Biblos</option>
-                                </select>
+                                <label style={labelStyle}>Produto</label>
+                                <select style={inputStyle}><option>Mensalidades</option><option>Curso</option></select>
                             </div>
                             <div>
-                                <label style={labelStyle}>Frente de Trabalho</label>
-                                <select style={inputStyle}>
-                                    <option>PAIDEIA</option>
-                                    <option>OIKOS</option>
-                                    <option>BIBLOS</option>
-                                </select>
+                                <label style={labelStyle}>Frente</label>
+                                <select style={inputStyle}><option>PAIDEIA</option><option>OIKOS</option></select>
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '16px' }}>
+                        <div className="grid" style={{ gridTemplateColumns: '1.2fr 0.8fr', gap: '16px' }}>
                             <div>
                                 <label style={labelStyle}>Valor Bruto</label>
-                                <input placeholder="R$ 0,00" style={{ ...inputStyle, fontWeight: 'bold' }} />
+                                <input placeholder="R$ 0,00" style={{ ...inputStyle, fontWeight: 'bold', border: '1px solid var(--primary)' }} />
                             </div>
                             <div>
-                                <label style={labelStyle}>Vencimento</label>
+                                <label style={labelStyle}>Vencimento Base</label>
                                 <input type="date" style={inputStyle} />
                             </div>
                         </div>
 
-                        <div style={{ padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px dashed #444' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px solid #222' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                                 <CreditCard size={18} color="var(--primary)" />
-                                <span style={{ fontSize: '13px', fontWeight: 'bold' }}>Configurações de Cobrança</span>
+                                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>Modelo de Cobrança</span>
                             </div>
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <button className="btn btn-ghost" style={{ flex: 1, fontSize: '11px', border: '1px solid #333' }}>Única</button>
-                                <button className="btn btn-ghost" style={{ flex: 1, fontSize: '11px', border: '1px solid var(--primary)', color: 'var(--primary)' }}>Parcelada</button>
-                                <button className="btn btn-ghost" style={{ flex: 1, fontSize: '11px', border: '1px solid #333' }}>Recorrente</button>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                                {(['UNICA', 'PARCELADA', 'RECORRENTE'] as const).map(m => (
+                                    <button
+                                        key={m}
+                                        onClick={() => setBillingType(m)}
+                                        style={{ ...tabButtonStyle, ...(billingType === m ? { background: 'var(--primary)', color: 'black' } : {}) }}
+                                    >
+                                        {m}
+                                    </button>
+                                ))}
                             </div>
+
+                            {billingType === 'PARCELADA' && (
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                    <div>
+                                        <label style={labelStyle}>Número de Parcelas</label>
+                                        <input type="number" defaultValue={2} style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Intervalo (Dias)</label>
+                                        <input type="number" defaultValue={30} style={inputStyle} />
+                                    </div>
+                                </div>
+                            )}
+                            {billingType === 'RECORRENTE' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <Info size={14} color="var(--text-disabled)" />
+                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Fatura será gerada mensalmente até cancelamento.</span>
+                                </div>
+                            )}
                         </div>
 
-                        <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
-                            <button className="btn btn-primary" style={{ flex: 1, padding: '14px' }}>Confirmar Receita</button>
-                            <button onClick={() => setShowNewEntry(false)} className="btn btn-ghost" style={{ flex: 0.5 }}>Cancelar</button>
+                        <button className="btn btn-primary" style={{ padding: '16px', marginTop: '12px' }}>Confirmar e Gerar Fatura</button>
+                    </div>
+                </div>
+            )}
+
+            {/* 5. Side Panel: IMPORT */}
+            {activeSidePanel === 'IMPORT' && (
+                <div style={sidePanelBaseStyle}>
+                    <div style={sidePanelHeader}>
+                        <h2 className="text-h2">Importar Recebíveis</h2>
+                        <button onClick={() => setActiveSidePanel(null)}><X size={20} /></button>
+                    </div>
+                    <div style={{ border: '2px dashed #333', borderRadius: '16px', padding: '60px 40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                        <UploadCloud size={48} color="var(--primary)" opacity={0.5} />
+                        <div>
+                            <p style={{ fontWeight: 'bold', fontSize: '15px' }}>Arraste seu arquivo Excel/CSV</p>
+                            <p style={{ fontSize: '12px', color: 'var(--text-disabled)', marginTop: '4px' }}>Ou clique para selecionar de seu computador</p>
                         </div>
+                        <button className="btn btn-ghost" style={{ border: '1px solid #333', fontSize: '12px' }}>Selecionar Arquivo</button>
+                    </div>
+                    <div style={{ marginTop: '32px' }}>
+                        <h4 style={{ fontSize: '11px', color: 'var(--text-disabled)', textTransform: 'uppercase', marginBottom: '12px' }}>Formatos Suportados</h4>
+                        <ul style={{ fontSize: '12px', color: 'var(--text-secondary)', listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--primary)' }} /> Planilha de Mensalidades (Padrão Paideia)</li>
+                            <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--primary)' }} /> Exportação de Gateway (Vindi/Asaas)</li>
+                            <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--primary)' }} /> Arquivo CNAB (Retorno Bancário)</li>
+                        </ul>
                     </div>
                 </div>
             )}
@@ -327,21 +296,12 @@ function StatusLabel({ status }: { status: string }) {
     };
     const style = styles[status] || { bg: '#333', color: '#AAA' };
     return (
-        <span style={{
-            padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700,
-            backgroundColor: style.bg, color: style.color
-        }}>
-            {status}
-        </span>
+        <span style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: 700, backgroundColor: style.bg, color: style.color }}>{status}</span>
     );
 }
 
-const inputStyle = {
-    width: '100%', backgroundColor: '#111', border: '1px solid #333', borderRadius: '8px',
-    padding: '12px', color: 'white', fontSize: '14px', outline: 'none'
-};
-
-const labelStyle = {
-    fontSize: '11px', color: 'var(--text-disabled)', textTransform: 'uppercase',
-    marginBottom: '8px', display: 'block', fontWeight: 'bold'
-};
+const inputStyle = { width: '100%', background: '#0D0D0D', border: '1px solid #222', padding: '10px 14px', borderRadius: '8px', color: 'white', fontSize: '14px', outline: 'none' };
+const labelStyle = { fontSize: '11px', color: 'var(--text-disabled)', textTransform: 'uppercase', marginBottom: '8px', display: 'block', fontWeight: 'bold' };
+const sidePanelBaseStyle: any = { position: 'fixed', right: 0, top: 0, bottom: 0, width: '450px', backgroundColor: '#0A0A0A', borderLeft: '1px solid #222', zLayout: 1000, padding: '40px', boxShadow: '-24px 0 60px rgba(0,0,0,0.7)', zIndex: 1000 };
+const sidePanelHeader: any = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' };
+const tabButtonStyle: any = { flex: 1, padding: '8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', border: '1px solid #333', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' };
