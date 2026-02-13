@@ -45,18 +45,23 @@ export default function Sidebar() {
             padding: '24px',
             zIndex: 50
         }}>
-            <div style={{ marginBottom: '40px', paddingLeft: '12px' }}>
-                <h1 style={{
-                    fontSize: '20px',
+            <div style={{ marginBottom: '40px', paddingLeft: '4px' }}>
+                <img
+                    src="/images/logo-light.png"
+                    alt="Cidade Viva"
+                    style={{ width: '100%', maxWidth: '180px', height: 'auto', marginBottom: '8px' }}
+                />
+                <div style={{
+                    fontSize: '16px',
                     fontWeight: 'bold',
-                    color: 'var(--primary)',
-                    letterSpacing: '-0.5px'
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    paddingLeft: '8px'
                 }}>
-                    Cidade Viva <span style={{ color: 'white' }}>Finance</span>
-                </h1>
-                <p style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    ERP + BI Suite
-                </p>
+                    Finance <span style={{ color: 'var(--primary)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>ERP+BI</span>
+                </div>
             </div>
 
             <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>

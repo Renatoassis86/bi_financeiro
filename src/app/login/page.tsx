@@ -65,23 +65,15 @@ export default function LoginPage() {
                 border: '1px solid #222'
             }}>
                 <div style={{ marginBottom: '32px' }}>
-                    <div style={{
-                        width: '64px',
-                        height: '64px',
-                        backgroundColor: 'var(--primary)',
-                        borderRadius: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 16px',
-                        color: 'black'
-                    }}>
-                        <ShieldCheck size={32} />
-                    </div>
-                    <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: 'white' }}>
-                        Cidade Viva <span style={{ color: 'var(--primary)' }}>Finance</span>
+                    <img
+                        src="/images/logo-light.png"
+                        alt="Cidade Viva Education"
+                        style={{ width: '100%', maxWidth: '240px', height: 'auto', marginBottom: '16px' }}
+                    />
+                    <h1 style={{ fontSize: '20px', fontWeight: '600', color: 'white', marginTop: '12px' }}>
+                        Finance <span style={{ color: 'var(--primary)', fontSize: '14px', verticalAlign: 'middle', marginLeft: '4px' }}>ERP + BI</span>
                     </h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '8px' }}>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '8px' }}>
                         Acesse o ecossistema financeiro
                     </p>
                 </div>
