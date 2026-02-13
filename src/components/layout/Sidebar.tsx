@@ -17,7 +17,8 @@ import {
     Layers,
     Target,
     Table,
-    LineChart
+    LineChart,
+    Upload
 } from 'lucide-react';
 
 const MENU_ITEMS = [
@@ -35,6 +36,7 @@ const MENU_ITEMS = [
     { name: 'Cadastros', path: '/cadastros', icon: Users },
     { name: 'Alertas', path: '/alertas', icon: Bell },
     { name: 'Forecast', path: '/forecast', icon: LineChart },
+    { name: 'Importação', path: '/importacao', icon: Upload },
     { name: 'Relatórios', path: '/relatorios', icon: FileText },
 ];
 

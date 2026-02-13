@@ -6,7 +6,8 @@ import {
     ArrowRight, Search, Filter, ShieldCheck, User,
     Calendar, FileText, Info, Plus, X, ArrowUpRight,
     TrendingDown, Zap, Shield, Ban, Check, Paperclip,
-    ChevronRight, Calculator, AlertTriangle, ShieldAlert
+    ChevronRight, Calculator, AlertTriangle, ShieldAlert,
+    Clock
 } from 'lucide-react';
 
 // --- TYPES & MOCK DATA ---
