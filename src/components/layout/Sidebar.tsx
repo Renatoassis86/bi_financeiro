@@ -14,14 +14,19 @@ import {
     Users,
     Grid,
     ArrowRightLeft,
-    Layers
+    Layers,
+    Target,
+    Table
 } from 'lucide-react';
 
 const MENU_ITEMS = [
     { name: 'Dashboard', path: '/', icon: Grid },
+    { name: 'Plan. Estratégico', path: '/orcamento/planejamento-estrategico', icon: Target },
+    { name: 'Plan. Tático', path: '/orcamento/planejamento-tatico', icon: Table },
     { name: 'Orçamento', path: '/orcamento', icon: PieChart },
     { name: 'Remanejamento', path: '/orcamento/remanejamento', icon: ArrowRightLeft },
     { name: 'Execução', path: '/execucao', icon: BarChart2 },
+    { name: 'DRE Gerencial', path: '/relatorios/dre', icon: Layers },
     { name: 'Fluxo de Caixa', path: '/fluxo-caixa', icon: TrendingUp },
     { name: 'Receitas', path: '/receitas', icon: DollarSign },
     { name: 'Despesas', path: '/despesas', icon: FileText },
@@ -29,7 +34,6 @@ const MENU_ITEMS = [
     { name: 'Cadastros', path: '/cadastros', icon: Users },
     { name: 'Alertas', path: '/alertas', icon: Bell },
     { name: 'Relatórios', path: '/relatorios', icon: FileText },
-    { name: 'DRE Gerencial', path: '/relatorios/dre', icon: Layers },
 ];
 
 export default function Sidebar() {
