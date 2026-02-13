@@ -13,7 +13,8 @@ import {
     Bell,
     Users,
     Grid,
-    ArrowRightLeft
+    ArrowRightLeft,
+    Layers
 } from 'lucide-react';
 
 const MENU_ITEMS = [
@@ -28,6 +29,7 @@ const MENU_ITEMS = [
     { name: 'Cadastros', path: '/cadastros', icon: Users },
     { name: 'Alertas', path: '/alertas', icon: Bell },
     { name: 'Relatórios', path: '/relatorios', icon: FileText },
+    { name: 'DRE Gerencial', path: '/relatorios/dre', icon: Layers },
 ];
 
 export default function Sidebar() {

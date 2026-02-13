@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   description: "Sistema de Gestão Financeira Integrada (ERP + BI)",
 };
 
+import { GlobalFilterProvider } from '@/contexts/GlobalFilterContext';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -23,33 +25,29 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={outfit.className}>
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
-          {/* Sidebar Area */}
-          <div style={{ width: 'var(--sidebar-width)', flexShrink: 0 }}>
-            <Sidebar />
-          </div>
-
-          {/* Main Area */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {/* Topbar Placeholder */}
-            <div style={{ height: 'var(--topbar-height)' }}>
-              {/* Topbar is fixed, so this spacer prevents content overlap if we didn't use padding-top on main. 
-                   But Topbar is fixed in its component style. 
-               */}
-              <Topbar />
+        <GlobalFilterProvider>
+          <div style={{ display: 'flex', minHeight: '100vh' }}>
+            {/* Sidebar Area */}
+            <div style={{ width: 'var(--sidebar-width)', flexShrink: 0 }}>
+              <Sidebar />
             </div>
 
-            {/* Content Scrollable */}
-            <main style={{
-              flex: 1,
-              padding: '32px',
-              backgroundColor: 'var(--bg-main)',
-              overflowY: 'auto'
-            }}>
-              {children}
-            </main>
+            {/* Main Area */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <Topbar />
+              {/* Content Scrollable */}
+              <main style={{
+                flex: 1,
+                padding: '32px',
+                backgroundColor: 'var(--bg-main)',
+                overflowY: 'auto',
+                marginTop: 'var(--topbar-height)' // Adjusted for fixed topbar
+              }}>
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
+        </GlobalFilterProvider>
       </body>
     </html>
   );
