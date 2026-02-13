@@ -12,12 +12,14 @@ import {
     Settings,
     Bell,
     Users,
-    Grid
+    Grid,
+    ArrowRightLeft
 } from 'lucide-react';
 
 const MENU_ITEMS = [
     { name: 'Dashboard', path: '/', icon: Grid },
     { name: 'Orçamento', path: '/orcamento', icon: PieChart },
+    { name: 'Remanejamento', path: '/orcamento/remanejamento', icon: ArrowRightLeft },
     { name: 'Execução', path: '/execucao', icon: BarChart2 },
     { name: 'Fluxo de Caixa', path: '/fluxo-caixa', icon: TrendingUp },
     { name: 'Receitas', path: '/receitas', icon: DollarSign },
