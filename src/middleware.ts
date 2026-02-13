@@ -1,24 +1,34 @@
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
-    // Simple check for simulation. In production, use Supabase tokens.
-    const authCookie = request.cookies.get('cv_finance_user_mock');
-    const { pathname } = request.nextUrl;
+export async function middleware(req: NextRequest) {
+    const res = NextResponse.next();
+    const supabase = createMiddlewareClient({ req, res });
 
-    // Protect all routes except login and public assets
-    if (!authCookie && pathname !== '/login' && !pathname.startsWith('/_next') && !pathname.startsWith('/api')) {
-        return NextResponse.redirect(new URL('/login', request.url));
+    const {
+        data: { session },
+    } = await supabase.auth.getSession();
+
+    const { pathname } = req.nextUrl;
+
+    // Protect internal routes
+    if (!session && pathname !== '/login' && !pathname.startsWith('/_next') && !pathname.startsWith('/api')) {
+        const redirectUrl = req.nextUrl.clone();
+        redirectUrl.pathname = '/login';
+        return NextResponse.redirect(redirectUrl);
     }
 
     // Redirect to dashboard if logged in and trying to access login page
-    if (authCookie && pathname === '/login') {
-        return NextResponse.redirect(new URL('/', request.url));
+    if (session && pathname === '/login') {
+        const redirectUrl = req.nextUrl.clone();
+        redirectUrl.pathname = '/';
+        return NextResponse.redirect(redirectUrl);
     }
 
-    return NextResponse.next();
+    return res;
 }
 
 export const config = {
-    matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+    matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

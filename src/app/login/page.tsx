@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -16,16 +17,31 @@ export default function LoginPage() {
         setLoading(true);
         setError('');
 
-        // Simulation of the provided credentials
-        if (email === 'renato.consultoria@cidadeviva.org' && password === 'renatoadmin2026') {
-            // Set a cookie for the middleware to see
-            document.cookie = "cv_finance_user_mock=true; path=/; max-age=3600";
+        try {
+            const { data, error: authError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-            setTimeout(() => {
+            if (authError) {
+                // Fallback for simulation if user is not created yet
+                if (email === 'renato.consultoria@cidadeviva.org' && password === 'renatoadmin2026') {
+                    // If Renato is using the system for the first time and hasn't created the user in Supabase Auth,
+                    // we can't "just log in". But for this demo, I'll inform him.
+                    setError('Usuário não encontrado no Supabase Auth. Por favor, crie o usuário no Dashboard do Supabase.');
+                } else {
+                    setError(authError.message);
+                }
+                setLoading(false);
+                return;
+            }
+
+            if (data.user) {
                 router.push('/');
-            }, 1000);
-        } else {
-            setError('Credenciais inválidas. Por favor, verifique seu e-mail e senha.');
+                router.refresh();
+            }
+        } catch (err) {
+            setError('Erro inesperado ao realizar login.');
             setLoading(false);
         }
     };
@@ -48,7 +64,6 @@ export default function LoginPage() {
                 boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
                 border: '1px solid #222'
             }}>
-                {/* Logo */}
                 <div style={{ marginBottom: '32px' }}>
                     <div style={{
                         width: '64px',
