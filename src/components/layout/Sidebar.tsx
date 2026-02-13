@@ -3,131 +3,95 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    BarChart2,
-    PieChart,
-    DollarSign,
+    LayoutDashboard,
     TrendingUp,
-    Briefcase,
-    FileText,
-    Settings,
-    Bell,
-    Users,
-    Grid,
+    PieChart,
     ArrowRightLeft,
     Layers,
     Target,
     Table,
     LineChart,
-    Upload
+    Upload,
+    Shield,
+    Bell,
+    Users,
+    FileText,
+    Settings,
+    Briefcase,
+    Plus,
+    Target as TargetIcon
 } from 'lucide-react';
 
 const MENU_ITEMS = [
-    { name: 'Dashboard', path: '/', icon: Grid },
+    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'Fluxo de Caixa', path: '/fluxo-caixa', icon: TrendingUp },
+    { name: 'DRE Gerencial', path: '/relatorios/dre', icon: Layers },
     { name: 'Plan. Estratégico', path: '/orcamento/planejamento-estrategico', icon: Target },
     { name: 'Plan. Tático', path: '/orcamento/planejamento-tatico', icon: Table },
-    { name: 'Orçamento', path: '/orcamento', icon: PieChart },
     { name: 'Remanejamento', path: '/orcamento/remanejamento', icon: ArrowRightLeft },
-    { name: 'Execução', path: '/execucao', icon: BarChart2 },
-    { name: 'DRE Gerencial', path: '/relatorios/dre', icon: Layers },
-    { name: 'Fluxo de Caixa', path: '/fluxo-caixa', icon: TrendingUp },
-    { name: 'Receitas', path: '/receitas', icon: DollarSign },
-    { name: 'Despesas', path: '/despesas', icon: FileText },
     { name: 'Empenho', path: '/empenho', icon: Briefcase },
     { name: 'Cadastros', path: '/cadastros', icon: Users },
     { name: 'Alertas', path: '/alertas', icon: Bell },
     { name: 'Forecast', path: '/forecast', icon: LineChart },
     { name: 'Importação', path: '/importacao', icon: Upload },
+    { name: 'Segurança', path: '/seguranca', icon: Shield },
     { name: 'Relatórios', path: '/relatorios', icon: FileText },
 ];
 
-export default function Sidebar() {
+export function Sidebar() {
     const pathname = usePathname();
 
     return (
-        <aside style={{
-            width: 'var(--sidebar-width)',
-            height: '100vh',
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            backgroundColor: 'var(--bg-sidebar)',
-            borderRight: '1px solid var(--border-subtle)',
-            display: 'flex',
-            flexDirection: 'column',
-            padding: '24px',
-            zIndex: 50
-        }}>
-            <div style={{ marginBottom: '40px', paddingLeft: '4px' }}>
-                <img
-                    src="/images/logo-light.png"
-                    alt="Cidade Viva"
-                    style={{ width: '100%', maxWidth: '180px', height: 'auto', marginBottom: '8px' }}
-                />
-                <div style={{
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    paddingLeft: '8px'
-                }}>
-                    Finance <span style={{ color: 'var(--primary)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>ERP+BI</span>
+        <aside className="w-64 bg-[#050505] border-r border-[#1A1A1A] flex flex-col h-screen fixed">
+            <div className="p-6 border-bottom border-[#1A1A1A]">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-light rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                        <TrendingUp className="text-black" size={24} />
+                    </div>
+                    <div>
+                        <h1 className="text-white font-bold text-lg leading-tight">Cidade Viva</h1>
+                        <p className="text-primary text-[10px] font-bold tracking-widest uppercase">Financeiro ++</p>
+                    </div>
                 </div>
             </div>
 
-            <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <nav className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
                 {MENU_ITEMS.map((item) => {
-                    const isActive = pathname === item.path;
+                    const isActive = pathname === item.path || (item.path !== '/' && pathname.startsWith(item.path));
                     return (
                         <Link
                             key={item.path}
                             href={item.path}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '12px',
-                                padding: '12px',
-                                borderRadius: '8px',
-                                fontSize: '14px',
-                                fontWeight: isActive ? 600 : 400,
-                                color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
-                                backgroundColor: isActive ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
-                                transition: 'all 0.2s ease',
-                                textDecoration: 'none'
-                            }}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${isActive
+                                    ? 'bg-primary/10 text-primary shadow-sm shadow-primary/5'
+                                    : 'text-gray-400 hover:bg-white/[0.03] hover:text-white'
+                                }`}
                         >
-                            <item.icon size={18} />
-                            {item.name}
+                            <item.icon size={20} className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+                            <span className="text-sm font-medium">{item.name}</span>
+                            {isActive && (
+                                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
+                            )}
                         </Link>
                     );
                 })}
             </nav>
 
-            <div style={{
-                borderTop: '1px solid var(--border-subtle)',
-                paddingTop: '20px',
-                marginTop: '20px'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        backgroundColor: 'var(--primary)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'black',
-                        fontWeight: 'bold',
-                        fontSize: '12px'
-                    }}>
-                        AD
+            <div className="p-4 mt-auto">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-[#111] to-[#090909] border border-white/[0.03]">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center border border-white/10 overflow-hidden">
+                            <div className="w-full h-full bg-[url('https://api.dicebear.com/7.x/avataaars/svg?seed=Renato')] bg-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-white truncate">Renato Assis</p>
+                            <p className="text-[10px] text-gray-500 truncate">Administrator</p>
+                        </div>
+                        <Settings size={14} className="text-gray-600 cursor-pointer hover:text-white transition-colors" />
                     </div>
-                    <div>
-                        <p style={{ fontSize: '14px', color: 'white', fontWeight: 500 }}>Admin User</p>
-                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Controller</p>
-                    </div>
+                    <button className="w-full h-8 text-[10px] font-bold tracking-widest uppercase bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors border border-white/5">
+                        Sair do Sistema
+                    </button>
                 </div>
             </div>
         </aside>
