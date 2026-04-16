@@ -9,19 +9,21 @@ import {
     ArrowUpRight, ArrowDownRight, Download,
     Calendar, Filter, ChevronRight, ChevronDown,
     Settings2, Info, TrendingUp, TrendingDown, Clock, AlertTriangle, Zap,
-    History, Search, CheckCircle2, MoreHorizontal, DollarSign, Wallet
+    History, Search, CheckCircle2, MoreHorizontal, DollarSign, Wallet, Sparkles,
+    Upload
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 // --- MOCK DATA ---
 
 const dailyData = [
     { date: '13/02', real: 850000, projected: 850000, balance: 1150000 },
     { date: '14/02', projected: 820000, balance: 1120000 },
-    { date: '15/02', projected: 450000, balance: 750000 }, // Big payment day
+    { date: '15/02', projected: 450000, balance: 750000 },
     { date: '16/02', projected: 550000, balance: 850000 },
     { date: '17/02', projected: 600000, balance: 900000 },
     { date: '18/02', projected: 580000, balance: 880000 },
-    { date: '19/02', projected: 920000, balance: 1220000 }, // Big revenue day
+    { date: '19/02', projected: 920000, balance: 1220000 },
     { date: '20/02', projected: 900000, balance: 1200000 },
 ];
 
@@ -47,165 +49,234 @@ export default function FluxoCaixaDiarioPage() {
         }));
     }, [scenarios]);
 
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    const handleImportXLSX = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const bstr = evt.target?.result;
+            const wb = XLSX.read(bstr, { type: 'binary' });
+            alert('Documento lido com sucesso! Processando integração com o banco...');
+            // Lógica de integração futura
+        };
+        reader.readAsBinaryString(file);
+    };
 
-            {/* 1. Integrated Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }} className="reveal">
+
+            {/* 1. Header Area */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingBottom: '24px',
+                borderBottom: '1px solid var(--border-active)'
+            }}>
                 <div>
-                    <h1 className="text-h1">Fluxo de Caixa Diário</h1>
-                    <p className="text-body">Monitoramento de liquidez imediata e projeção Real v Projected</p>
+                    <h1 className="text-h1" style={{ fontSize: '3rem' }}>
+                        Fluxo de <span style={{ color: 'var(--text-primary)' }}>Caixa</span>
+                    </h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
+                        Projeção diária de liquidez e simulação de cenários críticos
+                    </p>
                 </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '4px', display: 'flex' }}>
+                <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
+                    <button
+                        onClick={() => document.getElementById('xlsx-import-fc')?.click()}
+                        style={{ background: 'none', border: 'none', padding: 0 }}
+                        className="flex items-center gap-4 group hover:opacity-70 transition-all cursor-pointer"
+                    >
+                        <Upload size={20} className="text-[#F43F5E]" />
+                        <span className="text-[12px] font-black uppercase tracking-[0.3em] text-[#F43F5E]">IMPORTAR PLANILHA</span>
+                        <input
+                            id="xlsx-import-fc"
+                            type="file"
+                            style={{ display: 'none' }}
+                            accept=".xlsx, .xls"
+                            onChange={handleImportXLSX}
+                        />
+                    </button>
+
+                    <div style={{ display: 'flex', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '2px', padding: '2px' }}>
                         {(['D', 'W', 'M'] as const).map((mode) => (
                             <button
                                 key={mode}
                                 onClick={() => setViewMode(mode)}
                                 style={{
-                                    padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
+                                    padding: '8px 16px', borderRadius: '2px', fontSize: '10px', fontWeight: 900,
                                     background: viewMode === mode ? 'var(--primary)' : 'transparent',
                                     color: viewMode === mode ? 'black' : 'var(--text-disabled)',
-                                    transition: '0.2s'
+                                    border: 'none', cursor: 'pointer', transition: '0.2s'
                                 }}
                             >
-                                {mode === 'D' ? 'Diário' : mode === 'W' ? 'Semanal' : 'Mensal'}
+                                {mode === 'D' ? 'DIÁRIO' : mode === 'W' ? 'SEMANAL' : 'MENSAL'}
                             </button>
                         ))}
                     </div>
-                    <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Download size={18} /> Exportar Extrato
+                    <button className="btn btn-primary">
+                        <Download size={16} /> EXPORTAR EXTRATO
                     </button>
                 </div>
             </div>
 
-            {/* 2. Real-Time Liquidity Stats */}
-            <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-                <LiquidityStat label="Saldo em Conta" value="R$ 1.150.000" sub="Conciliado hoje" icon={<Wallet size={16} />} color="var(--primary)" />
-                <LiquidityStat label="Receitas (Próx. 7d)" value="R$ 450.000" sub="12 lançamentos" icon={<TrendingUp size={16} />} color="var(--success)" />
-                <LiquidityStat label="Contas a Pagar (Próx. 7d)" value="R$ 380.000" sub="8 lançamentos" icon={<TrendingDown size={16} />} color="var(--danger)" />
-                <LiquidityStat label="Disponibilidade Q+1" value="R$ 1.220.000" sub="Projeção líquida" icon={<Zap size={16} />} color="var(--secondary)" />
+            {/* 2. Liquidity Stats Grid */}
+            <div className="grid-stats">
+                <LiquidityStat label="SALDO CONCILIADO" value="R$ 1.150.000" sub="Disponibilidade Real" icon={<Wallet size={18} />} color="var(--primary)" />
+                <LiquidityStat label="RECEITAS PREVISTAS" value="R$ 450.000" sub="Sete dias úteis" icon={<TrendingUp size={18} />} color="var(--secondary)" />
+                <LiquidityStat label="CONTAS A PAGAR" value="R$ 380.000" sub="Sete dias úteis" icon={<TrendingDown size={18} />} color="var(--accent)" />
+                <LiquidityStat label="LIQUIDEZ PROJETADA" value="R$ 1.220.000" sub="Saldo em Q+1" icon={<Zap size={18} />} color="var(--primary)" />
             </div>
 
-            {/* 3. Main Daily Chart */}
-            <div className="card" style={{ padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+            {/* 3. Main Chart Card */}
+            <div className="card" style={{ padding: '32px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
                     <div>
-                        <h3 style={{ fontSize: '16px', fontWeight: 700 }}>Curva de Disponibilidade (Real v Projected)</h3>
-                        <p style={{ fontSize: '12px', color: 'var(--text-disabled)' }}>Considerando saldo inicial + entradas/saídas confirmadas</p>
+                        <h3 className="text-h2" style={{ fontSize: '1.4rem' }}>Curva de Disponibilidade <span style={{ color: 'var(--secondary)' }}>Real vs Projected</span></h3>
+                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Análise micro-temporal de saldo e stress test</p>
                     </div>
-                    <div style={{ display: 'flex', gap: '16px', fontSize: '11px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', background: 'var(--primary)', borderRadius: '2px' }} /> Saldo Projetado</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', background: 'var(--danger)', borderRadius: '2px', border: '1px dashed white' }} /> Stress Test (-{scenarios.atrasoRecebiveis}%)</div>
+                    <div style={{ display: 'flex', gap: '24px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '12px', height: '12px', backgroundColor: 'var(--primary)', borderRadius: '2px' }} />
+                            <span style={{ fontSize: '10px', fontWeight: 900 }}>PROJEÇÃO BASE</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '12px', height: '1px', backgroundColor: 'var(--accent)', border: '1px dashed var(--accent)' }} />
+                            <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--accent)' }}>STRESS TEST (-{scenarios.atrasoRecebiveis}%)</span>
+                        </div>
                     </div>
                 </div>
-                <div style={{ height: '350px', width: '100%' }}>
+
+                <div style={{ height: '380px', width: '100%' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={chartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-                            <XAxis dataKey="date" stroke="#444" fontSize={11} tickLine={false} axisLine={false} />
-                            <YAxis stroke="#444" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `R$ ${(v / 1000).toFixed(0)}k`} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#111" vertical={false} />
+                            <XAxis dataKey="date" stroke="#333" fontSize={10} tickLine={false} axisLine={false} tick={{ fill: '#555', fontWeight: 700 }} />
+                            <YAxis stroke="#333" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `R$ ${(v / 1000).toFixed(0)}k`} tick={{ fill: '#555', fontWeight: 700 }} />
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#090909', border: '1px solid #222', borderRadius: '8px', fontSize: '12px' }}
+                                contentStyle={{ backgroundColor: '#0A0A0A', border: '1px solid #222', borderRadius: '4px', fontSize: '12px' }}
+                                cursor={{ stroke: 'var(--border-active)', strokeWidth: 1 }}
                             />
-                            <Area type="monotone" dataKey="balance" fill="rgba(0, 230, 118, 0.05)" stroke="none" />
-                            <Line type="monotone" dataKey="balance" name="Projeção" stroke="var(--primary)" strokeWidth={3} dot={{ r: 4, fill: 'var(--primary)' }} />
-                            <Line type="monotone" dataKey="conservador" name="Stress Test" stroke="var(--danger)" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                            <ReferenceLine y={500000} stroke="rgba(255,23,68,0.2)" strokeDasharray="3 3" label={{ value: 'Limite Segurança', position: 'right', fill: 'var(--danger)', fontSize: 10 }} />
+                            <Area type="monotone" dataKey="balance" fill="rgba(229, 225, 216, 0.05)" stroke="none" />
+                            <Line type="stepAfter" dataKey="balance" name="Projeção" stroke="var(--primary)" strokeWidth={3} dot={{ r: 4, fill: 'var(--primary)', stroke: 'black' }} />
+                            <Line type="monotone" dataKey="conservador" name="Stress Test" stroke="var(--accent)" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                            <ReferenceLine y={500000} stroke="rgba(255,102,0,0.3)" strokeDasharray="3 3" label={{ value: 'LIMITE DE SEGURANÇA', position: 'right', fill: 'var(--accent)', fontSize: 9, fontWeight: 900 }} />
                         </ComposedChart>
                     </ResponsiveContainer>
                 </div>
             </div>
 
-            {/* 4. Scenario Controls & Drill-down */}
-            <div className="grid" style={{ gridTemplateColumns: '1fr 2fr', gap: '24px' }}>
+            {/* 4. Scenario & Drilldown Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) 2fr', gap: '32px' }}>
 
-                {/* Simulation Panel */}
-                <div className="card" style={{ padding: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                        <Settings2 size={18} color="var(--primary)" />
-                        <h3 style={{ fontSize: '14px', fontWeight: 700 }}>Simulador de Stress</h3>
+                {/* Simulator */}
+                <div className="card" style={{ padding: '32px', height: 'fit-content' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
+                        <Settings2 size={18} color="var(--secondary)" />
+                        <h3 className="text-h3" style={{ color: 'var(--text-primary)' }}>Simulador de Stress</h3>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                         <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                <label style={{ fontSize: '11px', color: 'var(--text-disabled)', fontWeight: 'bold' }}>QUEBRA DE RECEITA (%)</label>
-                                <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)' }}>{scenarios.atrasoRecebiveis}%</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                <label style={{ fontSize: '10px', color: 'var(--text-disabled)', fontWeight: 900, textTransform: 'uppercase' }}>Quebra de Receita Mensal</label>
+                                <span style={{ fontSize: '14px', fontWeight: 400, fontFamily: 'var(--font-serif)', color: 'var(--primary)' }}>{scenarios.atrasoRecebiveis}%</span>
                             </div>
                             <input
-                                type="range" min="0" max="40" step="5"
+                                type="range" min="0" max="50" step="5"
                                 value={scenarios.atrasoRecebiveis}
                                 onChange={(e) => setScenarios({ ...scenarios, atrasoRecebiveis: parseInt(e.target.value) })}
-                                style={{ width: '100%', accentColor: 'var(--primary)' }}
+                                style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer' }}
                             />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                                <span style={{ fontSize: '9px', color: '#333' }}>OTIMISTA</span>
+                                <span style={{ fontSize: '9px', color: '#333' }}>CRÍTICO</span>
+                            </div>
                         </div>
-                        <div style={{ padding: '16px', background: 'rgba(255,171,0,0.02)', border: '1px dashed var(--warning)', borderRadius: '12px' }}>
-                            <p style={{ fontSize: '11px', color: 'var(--warning)', fontWeight: 700, marginBottom: '4px' }}>ALERTA DE LIQUIDEZ</p>
-                            <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Com {scenarios.atrasoRecebiveis}% de quebra, o saldo atinge o limite de segurança em 3 dias.</p>
+
+                        <div style={{ padding: '24px', background: 'rgba(255,102,0,0.02)', border: '1px dashed var(--accent)', borderRadius: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                <AlertTriangle size={14} color="var(--accent)" />
+                                <p style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 700 }}>RISCO DE LIQUIDEZ</p>
+                            </div>
+                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                Sob este cenário, o grupo precisará de aporte em <strong>3.5 meses</strong> para manter as operações básicas.
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Daily Extrait */}
+                {/* Extrato */}
                 <div className="card" style={{ padding: 0 }}>
-                    <div style={{ padding: '20px 24px', borderBottom: '1px solid #1A1A1A', display: 'flex', justifyContent: 'space-between' }}>
-                        <h3 style={{ fontSize: '14px', fontWeight: 700 }}>Lançamentos Futuros (Conciliação Diária)</h3>
+                    <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h3 className="text-h3" style={{ color: 'var(--text-primary)' }}>Lançamentos Futuros</h3>
                         <div style={{ position: 'relative' }}>
-                            <input placeholder="Filtrar por descrição..." style={{ background: '#0D0D0D', border: '1px solid #222', padding: '6px 12px 6px 30px', borderRadius: '6px', fontSize: '12px', color: 'white', outline: 'none' }} />
-                            <Search size={12} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
+                            <input placeholder="Procurar transação..." style={inputStyle} />
+                            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#333' }} />
                         </div>
                     </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
-                            <tr style={{ background: 'rgba(255,255,255,0.01)', color: 'var(--text-disabled)', textTransform: 'uppercase', fontSize: '10px' }}>
-                                <th style={{ padding: '16px 24px' }}>Data / ID</th>
-                                <th style={{ padding: '16px' }}>Descrição</th>
-                                <th style={{ padding: '16px', textAlign: 'right' }}>Previsto</th>
+                            <tr style={{ background: 'rgba(255,255,255,0.01)', color: 'var(--text-disabled)', fontSize: '10px', textTransform: 'uppercase', borderBottom: '1px solid var(--border-active)' }}>
+                                <th style={{ padding: '16px 32px' }}>Data / ID</th>
+                                <th style={{ padding: '16px' }}>Descrição da Operação</th>
+                                <th style={{ padding: '16px', textAlign: 'right' }}>Valor Previsto</th>
                                 <th style={{ padding: '16px', textAlign: 'center' }}>Status</th>
-                                <th style={{ padding: '16px 24px' }}></th>
+                                <th style={{ padding: '16px 32px' }}></th>
                             </tr>
                         </thead>
                         <tbody>
                             {detailedEntries.map(entry => (
-                                <tr key={entry.id} style={{ borderBottom: '1px solid #1A1A1A' }} className="hover:bg-white/[0.01]">
-                                    <td style={{ padding: '14px 24px' }}>
-                                        <p style={{ fontWeight: 600 }}>{entry.data}</p>
+                                <tr key={entry.id} style={{ borderBottom: '1px solid var(--border-subtle)' }} className="hover:bg-white/[0.01]">
+                                    <td style={{ padding: '16px 32px' }}>
+                                        <p style={{ fontSize: '13px', fontWeight: 700 }}>{entry.data}</p>
                                         <p style={{ fontSize: '10px', color: 'var(--text-disabled)' }}>{entry.hash}</p>
                                     </td>
-                                    <td style={{ padding: '14px' }}>
-                                        <p style={{ fontWeight: 600 }}>{entry.descricao}</p>
-                                        <p style={{ fontSize: '10px', color: 'var(--text-disabled)' }}>Frente: {entry.frente}</p>
+                                    <td style={{ padding: '16px' }}>
+                                        <p style={{ fontSize: '13px', fontWeight: 600 }}>{entry.descricao}</p>
+                                        <p style={{ fontSize: '10px', color: 'var(--secondary)', textTransform: 'uppercase', fontWeight: 700 }}>{entry.frente}</p>
                                     </td>
-                                    <td style={{ padding: '14px', textAlign: 'right', fontWeight: 'bold' }}>
+                                    <td style={{ padding: '16px', textAlign: 'right', fontSize: '13px', fontWeight: 700 }}>
                                         R$ {entry.previsto.toLocaleString()}
                                     </td>
-                                    <td style={{ padding: '14px', textAlign: 'center' }}>
-                                        <span style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '4px', background: entry.status === 'Confirmado' ? 'rgba(0,230,118,0.1)' : 'rgba(255,171,0,0.1)', color: entry.status === 'Confirmado' ? 'var(--success)' : 'var(--warning)' }}>{entry.status}</span>
+                                    <td style={{ padding: '16px', textAlign: 'center' }}>
+                                        <span style={{
+                                            fontSize: '9px', padding: '4px 8px', borderRadius: '2px', fontWeight: 800,
+                                            background: entry.status === 'Confirmado' ? 'rgba(0,255,136,0.05)' : 'rgba(255,102,0,0.05)',
+                                            color: entry.status === 'Confirmado' ? '#00ff88' : 'var(--accent)'
+                                        }}>{entry.status.toUpperCase()}</span>
                                     </td>
-                                    <td style={{ padding: '14px 24px', textAlign: 'right' }}>
-                                        <ChevronRight size={16} color="#333" />
+                                    <td style={{ padding: '16px 32px', textAlign: 'right' }}>
+                                        <ChevronRight size={18} color="#222" />
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
-
             </div>
-
         </div>
     );
 }
 
 function LiquidityStat({ label, value, sub, icon, color }: any) {
     return (
-        <div className="card" style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: `${color}10`, color: color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</div>
-                <p style={{ fontSize: '10px', color: 'var(--text-disabled)', textTransform: 'uppercase', fontWeight: 'bold' }}>{label}</p>
+        <div className="card" style={{ padding: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div style={{ width: '40px', height: '40px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)', color: color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {icon}
+                </div>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: color }} />
             </div>
-            <h2 style={{ fontSize: '22px', fontWeight: 'bold' }}>{value}</h2>
-            <p style={{ fontSize: '11px', color: 'var(--text-disabled)', marginTop: '2px' }}>{sub}</p>
+            <p style={{ fontSize: '9px', color: 'var(--text-disabled)', textTransform: 'uppercase', fontWeight: 900, letterSpacing: '0.1em', marginBottom: '8px' }}>{label}</p>
+            <h2 style={{ fontSize: '24px', fontWeight: 400, fontFamily: 'var(--font-serif)', color: 'white' }}>{value}</h2>
+            <p style={{ fontSize: '11px', color: '#555', marginTop: '6px', fontWeight: 600 }}>{sub}</p>
         </div>
     );
 }
+
+const inputStyle = {
+    background: 'var(--bg-input)', border: '1px solid var(--border-subtle)',
+    padding: '10px 12px 10px 36px', borderRadius: '2px', fontSize: '11px',
+    color: 'white', outline: 'none', width: '220px'
+};

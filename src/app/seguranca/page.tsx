@@ -1,226 +1,238 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import {
-    Shield, Users, Lock, Key, Eye, EyeOff,
-    History, UserPlus, Search, Filter, ShieldCheck,
-    ShieldAlert, UserCheck, Trash2, Edit2,
-    ArrowRight, ShieldX, Database, Activity,
-    ChevronRight, MoreHorizontal, User, Download
+    Users, Shield, ShieldAlert, ShieldCheck,
+    Search, UserPlus, MoreVertical, Key,
+    Mail, Calendar, BadgeCheck, ChevronRight, Lock
 } from 'lucide-react';
-import { useGlobalFilters, UserRole } from '@/contexts/GlobalFilterContext';
 
-// --- MOCK DATA ---
+interface UserProfile {
+    id: string;
+    email: string;
+    full_name: string;
+    role: 'admin' | 'controller' | 'manager' | 'viewer';
+    created_at: string;
+}
 
-const PERMISSOES_LIST = [
-    { id: 'u-001', nome: 'Renato Assis', role: 'ADMIN', lastAccess: '10 min atrás', status: 'ATIVO' },
-    { id: 'u-002', nome: 'Maria Silva', role: 'CONTROLADORIA', lastAccess: '1 hora atrás', status: 'ATIVO' },
-    { id: 'u-003', nome: 'Felipe Santos', role: 'GESTOR_FRENTE', front: 'PAIDEIA', lastAccess: '2 dias atrás', status: 'ATIVO' },
-    { id: 'u-004', nome: 'Joana Darc', role: 'GESTOR_CC', cc: ['Marketing', 'Vendas'], lastAccess: '15 min atrás', status: 'ATIVO' },
-    { id: 'u-005', nome: 'Carlos Eduardo', role: 'LEITOR', lastAccess: '5 dias atrás', status: 'INATIVO' },
-];
+export default function GestaoSeguranca() {
+    const [loading, setLoading] = useState(true);
+    const [users, setUsers] = useState<UserProfile[]>([]);
+    const [activeTab, setActiveTab] = useState<'USERS' | 'AUDIT'>('USERS');
 
-const AUDIT_LOGS = [
-    { id: 1, data: '13/02 11:20', usuario: 'Maria Silva', acao: 'Aprovação de Remanejamento', recurso: 'RE-012', ip: '192.168.1.45' },
-    { id: 2, data: '13/02 10:45', usuario: 'Renato Assis', acao: 'Configuração de Motor de Alerta', recurso: 'Alertas', ip: '192.168.1.10' },
-    { id: 3, data: '13/02 09:15', usuario: 'Felipe Santos', acao: 'Acesso Negado (Tentativa de ver Oikos)', recurso: 'DRE Oikos', ip: '10.0.0.12' },
-];
+    const auditLogs = [
+        { id: 1, user: 'isabela.rolim@cidadeviva.org', action: 'Alteração Orçamentária', target: 'Rubrica: Salários ADM', date: '13/02/2026 19:42', oldVal: 'R$ 4.200', newVal: 'R$ 4.543' },
+        { id: 2, user: 'admin@cidadeviva.org', action: 'Fechamento de Mês', target: 'Competência: Janeiro/2026', date: '13/02/2026 19:30', oldVal: 'ABERTO', newVal: 'TRANCADO' },
+        { id: 3, user: 'contato@paideia.edu', action: 'Inclusão de Receita', target: 'Lote #882 - Mensalidades', date: '12/02/2026 14:15', oldVal: '-', newVal: 'R$ 125.000' },
+    ];
 
-export default function SecurityRBACPage() {
-    const { user: currentUser, setUser: setCurrentUser } = useGlobalFilters();
-    const [activeTab, setActiveTab] = useState<'USERS' | 'LOGS' | 'ROLES'>('USERS');
-    const [isEditingPermissions, setIsEditingPermissions] = useState(false);
+    useEffect(() => {
+        fetchUsers();
+    }, []);
 
-    const simulateRole = (role: UserRole, nome: string, front?: string) => {
-        setCurrentUser({
-            id: 'simulated',
-            nome,
-            role,
-            frontRestrito: front
-        });
-        alert(`Simulando Perfil: ${role} (${nome})`);
+    const fetchUsers = async () => {
+        setLoading(true);
+        try {
+            const { data } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('role', { ascending: true });
+
+            if (data) setUsers(data as UserProfile[]);
+        } catch (err) {
+            console.error('Error fetching users:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateRole = async (userId: string, newRole: string) => {
+        const { error } = await supabase
+            .from('profiles')
+            .update({ role: newRole })
+            .eq('id', userId);
+
+        if (!error) {
+            fetchUsers();
+            alert('Permissão atualizada com sucesso!');
+        }
+    };
+
+    const getRoleConfig = (role: string) => {
+        switch (role) {
+            case 'admin': return { label: 'Administrador', icon: ShieldAlert, color: '#F43F5E', desc: 'Acesso total ao sistema e configurações críticas.' };
+            case 'controller': return { label: 'Controladoria', icon: ShieldCheck, color: 'var(--primary)', desc: 'Gestão de orçamento, fechamentos e BI analítico.' };
+            case 'manager': return { label: 'Gerente (Unidade)', icon: Shield, color: 'var(--accent-azure)', desc: 'Visualização de dashboards e inputs operacionais.' };
+            default: return { label: 'Visualizador', icon: BadgeCheck, color: 'var(--text-disabled)', desc: 'Acesso restrito a relatórios e visualizações básicas.' };
+        }
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-
-            {/* 1. Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                    <h1 className="text-h1">Segurança & Governança (RBAC)</h1>
-                    <p className="text-body">Controle de acesso baseado em perfis e trilha de auditoria completa</p>
-                </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <button className="btn btn-ghost" style={{ border: '1px solid #333' }}>
-                        <Activity size={16} /> Ver Atividades em Tempo Real
-                    </button>
-                    <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <UserPlus size={18} /> Adicionar Usuário
-                    </button>
-                </div>
-            </div>
-
-            {/* 2. Security Overview Stats */}
-            <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-                <SecurityStat label="Usuários Ativos" value="24" icon={<Users size={16} />} color="var(--primary)" />
-                <SecurityStat label="Tentativas de Acesso" value="342" icon={<Shield size={16} />} color="var(--secondary)" />
-                <SecurityStat label="Alertas de Segurança" value="02" icon={<ShieldAlert size={16} />} color="var(--danger)" />
-                <SecurityStat label="Auditoria Sanitizada" value="100%" icon={<ShieldCheck size={16} />} color="var(--success)" />
-            </div>
-
-            {/* 3. Main Security Tabs */}
-            <div className="card" style={{ padding: 0 }}>
-                <div style={{ display: 'flex', padding: '0 24px', borderBottom: '1px solid #1A1A1A' }}>
-                    <button onClick={() => setActiveTab('USERS')} style={{ ...tabStyle, borderBottom: activeTab === 'USERS' ? '2px solid var(--primary)' : 'none', color: activeTab === 'USERS' ? 'white' : 'var(--text-disabled)' }}>Usuários e Perfis</button>
-                    <button onClick={() => setActiveTab('LOGS')} style={{ ...tabStyle, borderBottom: activeTab === 'LOGS' ? '2px solid var(--primary)' : 'none', color: activeTab === 'LOGS' ? 'white' : 'var(--text-disabled)' }}>Logs de Auditoria</button>
-                    <button onClick={() => setActiveTab('ROLES')} style={{ ...tabStyle, borderBottom: activeTab === 'ROLES' ? '2px solid var(--primary)' : 'none', color: activeTab === 'ROLES' ? 'white' : 'var(--text-disabled)' }}>Matriz de Permissões</button>
-                </div>
-
-                {activeTab === 'USERS' && (
-                    <div style={{ padding: '24px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
-                            <div style={{ position: 'relative' }}>
-                                <input placeholder="Buscar usuário por nome ou email..." style={{ ...inputStyle, width: '350px', paddingLeft: '36px' }} />
-                                <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
-                            </div>
-                            <div style={{ fontSize: '12px', color: 'var(--text-disabled)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                Sua sessão atual: <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>{currentUser.nome} ({currentUser.role})</span>
-                            </div>
-                        </div>
-
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-                            <thead>
-                                <tr style={{ background: 'rgba(255,255,255,0.01)', color: 'var(--text-disabled)', fontSize: '10px', textTransform: 'uppercase' }}>
-                                    <th style={{ padding: '16px 20px' }}>Usuário</th>
-                                    <th style={{ padding: '16px' }}>Perfil / Role</th>
-                                    <th style={{ padding: '16px' }}>Escopo / Restrição</th>
-                                    <th style={{ padding: '16px' }}>Último Acesso</th>
-                                    <th style={{ padding: '16px', textAlign: 'center' }}>Simular</th>
-                                    <th style={{ padding: '16px 20px', width: '100px' }}></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {PERMISSOES_LIST.map((u) => (
-                                    <tr key={u.id} style={{ borderBottom: '1px solid #1A1A1A' }} className="hover:bg-white/[0.01]">
-                                        <td style={{ padding: '16px 20px' }}>
-                                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>{u.nome.split(' ').map(n => n[0]).join('')}</div>
-                                                <div>
-                                                    <p style={{ fontWeight: 600 }}>{u.nome}</p>
-                                                    <p style={{ fontSize: '11px', color: 'var(--text-disabled)' }}>{u.id}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: '16px' }}>
-                                            <RoleBadge role={u.role as UserRole} />
-                                        </td>
-                                        <td style={{ padding: '16px' }}>
-                                            {u.front ? (
-                                                <span style={{ fontSize: '11px', color: 'var(--secondary)' }}>Somente Frente: <strong>{u.front}</strong></span>
-                                            ) : u.cc ? (
-                                                <span style={{ fontSize: '11px', color: 'var(--warning)' }}>CC: <strong>{u.cc.join(', ')}</strong></span>
-                                            ) : (
-                                                <span style={{ fontSize: '11px', color: 'var(--text-disabled)' }}>Acesso Global</span>
-                                            )}
-                                        </td>
-                                        <td style={{ padding: '16px', fontSize: '12px' }}>{u.lastAccess}</td>
-                                        <td style={{ padding: '16px', textAlign: 'center' }}>
-                                            <button onClick={() => simulateRole(u.role as UserRole, u.nome, u.front)} className="btn btn-ghost" style={{ padding: '6px', fontSize: '10px', height: 'auto' }} title="Testar ambiente como este usuário">
-                                                <Key size={14} />
-                                            </button>
-                                        </td>
-                                        <td style={{ padding: '16px 20px', textAlign: 'right' }}>
-                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                                <button className="btn btn-ghost" style={{ padding: '4px' }}><Edit2 size={14} /></button>
-                                                <button className="btn btn-ghost" style={{ padding: '4px', color: 'var(--danger)' }}><Trash2 size={14} /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+        <div className="reveal space-y-16 pb-20">
+            {/* Header - SPACIOUS */}
+            <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-12">
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3">
+                        <Lock className="text-[var(--primary)]" size={16} />
+                        <h2 className="text-caption text-[var(--primary)] tracking-[0.4em] text-sm">Security & Compliance Hub</h2>
                     </div>
-                )}
-
-                {activeTab === 'LOGS' && (
-                    <div style={{ padding: '24px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
-                            <h3 style={{ fontSize: '14px', fontWeight: 700 }}>Trilha de Auditoria (Últimas 24h)</h3>
-                            <button className="btn btn-ghost" style={{ fontSize: '11px', border: '1px solid #222' }}><Download size={14} style={{ marginRight: 8 }} /> Exportar CSV para Compliance</button>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {AUDIT_LOGS.map(log => (
-                                <div key={log.id} style={{ padding: '16px', background: 'rgba(255,255,255,0.01)', border: '1px solid #1A1A1A', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: log.acao.includes('Negado') ? 'var(--danger)' : 'var(--primary)' }} />
-                                        <div>
-                                            <p style={{ fontSize: '13px', fontWeight: 600 }}>{log.acao}</p>
-                                            <p style={{ fontSize: '11px', color: 'var(--text-disabled)' }}>Recurso: {log.recurso} • IP: {log.ip}</p>
-                                        </div>
-                                    </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <p style={{ fontSize: '13px', fontWeight: 700 }}>{log.usuario}</p>
-                                        <p style={{ fontSize: '11px', color: 'var(--text-disabled)' }}>{log.data}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'ROLES' && (
-                    <div style={{ padding: '40px', textAlign: 'center' }}>
-                        <Lock size={48} color="#333" style={{ margin: '0 auto 20px' }} />
-                        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '12px' }}>Matriz de Permissões Enterprise</h3>
-                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '500px', margin: '0 auto 32px' }}>
-                            A edição da matriz de permissões requer autenticação de dois fatores e é restrita ao perfil de Diretor de Tecnologia.
-                        </p>
-                        <button className="btn btn-primary">Solicitar Acesso à Matriz</button>
-                    </div>
-                )}
-            </div>
-
-            {/* 4. Security Policies Notice */}
-            <div className="card" style={{ background: 'rgba(255, 23, 68, 0.03)', borderColor: 'rgba(255, 23, 68, 0.2)', display: 'flex', gap: '24px', alignItems: 'center' }}>
-                <ShieldX size={32} color="var(--danger)" />
-                <div>
-                    <h4 style={{ fontWeight: 700, marginBottom: '4px' }}>Aviso de Compliance</h4>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                        Todas as movimentações financeiras acima de R$ 50.000 são logadas e enviadas para o comitê de auditoria externa automaticamente. Tentativas de acesso não autorizado são bloqueadas após 3 falhas.
+                    <h1 className="h1">Controle de <span className="text-[var(--primary)]">Acessos</span></h1>
+                    <p className="text-lg font-medium text-[var(--text-secondary)] opacity-80 max-w-2xl leading-relaxed">
+                        Gestão centralizada de privilégios, auditoria de logs e política de segurança institucional.
                     </p>
                 </div>
+                <button className="btn btn-primary !px-12 shadow-xl shadow-[var(--primary)]/20">
+                    <UserPlus size={18} />
+                    <span>CONVIDAR USUÁRIO</span>
+                </button>
+            </header>
+
+            {/* Matrix of Permissions - SPACIOUS CARDS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+                {['admin', 'controller', 'manager', 'viewer'].map(r => {
+                    const config = getRoleConfig(r);
+                    return (
+                        <div key={r} className="card border-t-4" style={{ borderTopColor: config.color }}>
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="p-3 rounded-xl bg-white/5" style={{ color: config.color }}>
+                                    <config.icon size={24} />
+                                </div>
+                                <h4 className="text-sm font-black uppercase tracking-widest text-white">{config.label}</h4>
+                            </div>
+                            <p className="text-sm text-[var(--text-muted)] leading-relaxed font-medium">
+                                {config.desc}
+                            </p>
+                        </div>
+                    );
+                })}
             </div>
 
+            {/* Tabs & Table Section */}
+            <div className="space-y-10">
+                <div className="flex gap-12 border-b border-white/5">
+                    {['USERS', 'AUDIT'].map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab as any)}
+                            className={`pb-6 text-xs font-black uppercase tracking-[0.25em] transition-all border-b-2 ${activeTab === tab ? 'border-[var(--primary)] text-[var(--primary)]' : 'border-transparent text-[var(--text-disabled)] hover:text-white'}`}
+                        >
+                            {tab === 'USERS' ? 'Colaboradores' : 'Registro de Auditoria'}
+                        </button>
+                    ))}
+                </div>
+
+                {activeTab === 'USERS' ? (
+                    <div className="card !p-0 overflow-hidden shadow-2xl">
+                        <div className="p-10 border-b border-white/5 bg-[#1D222B]">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-white">Matriz de Usuários Ativos</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-black/20 text-[10px] uppercase font-black text-[var(--text-disabled)] tracking-[0.2em]">
+                                    <tr>
+                                        <th className="p-8">Colaborador</th>
+                                        <th className="p-8">Nível de Acesso</th>
+                                        <th className="p-8">Data Cadastro</th>
+                                        <th className="p-8 text-right">Ações de Segurança</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {users.map(user => {
+                                        const roleInfo = getRoleConfig(user.role);
+                                        return (
+                                            <tr key={user.id} className="hover:bg-white/[0.01] transition-all group">
+                                                <td className="p-8">
+                                                    <div className="flex items-center gap-5">
+                                                        <div className="w-12 h-12 bg-[var(--bg-input)] rounded-2xl flex items-center justify-center font-black text-[var(--primary)] text-lg border border-white/5 shadow-inner">
+                                                            {user.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-sm font-black text-white">{user.full_name || 'Usuário s/ nome'}</span>
+                                                            <span className="text-[11px] text-[var(--text-disabled)] lowercase flex items-center gap-2">
+                                                                <Mail size={12} /> {user.email}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-8">
+                                                    <div className="flex items-center gap-3 bg-[var(--bg-input)] px-4 py-2.5 rounded-xl border border-white/5 w-fit">
+                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: roleInfo.color }} />
+                                                        <span className="text-[11px] font-black uppercase tracking-widest text-white">{roleInfo.label}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-8">
+                                                    <div className="flex items-center gap-3 text-[var(--text-muted)] font-bold text-xs">
+                                                        <Calendar size={14} />
+                                                        {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                                                    </div>
+                                                </td>
+                                                <td className="p-8 text-right">
+                                                    <div className="flex justify-end gap-3">
+                                                        <button className="btn !p-3 bg-white/5 border-white/5 hover:bg-[var(--primary)]/10 hover:text-[var(--primary)]"><Key size={16} /></button>
+                                                        <button className="btn !p-3 bg-white/5 border-white/5 hover:bg-white/10"><MoreVertical size={16} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="card !p-0 overflow-hidden shadow-2xl">
+                        <div className="p-10 border-b border-white/5 bg-[#1D222B]">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-white">Logs de Auditoria Interna</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                            {/* ... Audit table (similar spacing) ... */}
+                            <table className="w-full text-left">
+                                <thead className="bg-black/20 text-[10px] uppercase font-black text-[var(--text-disabled)] tracking-[0.2em]">
+                                    <tr>
+                                        <th className="p-8">Timestamp</th>
+                                        <th className="p-8">Usuário</th>
+                                        <th className="p-8">Ação Analítica</th>
+                                        <th className="p-8 text-right">Variatória</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {auditLogs.map(log => (
+                                        <tr key={log.id} className="hover:bg-white/[0.01] transition-all">
+                                            <td className="p-8 text-xs text-[var(--text-disabled)] font-bold">{log.date}</td>
+                                            <td className="p-8">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[10px] font-black border border-white/10">UI</div>
+                                                    <span className="text-xs font-black text-white">{log.user}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-8">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--primary)] bg-[var(--primary)]/5 px-3 py-1.5 rounded-lg border border-[var(--primary)]/10">
+                                                    {log.action}
+                                                </span>
+                                            </td>
+                                            <td className="p-8 text-right">
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <span className="text-[10px] text-[var(--text-disabled)] line-through opacity-40">{log.oldVal}</span>
+                                                    <span className="text-xs text-[var(--success)] font-black">{log.newVal}</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="p-10 bg-[var(--danger)]/5 border border-dashed border-[var(--danger)]/20 rounded-2xl flex gap-8 items-center">
+                <ShieldAlert className="text-[var(--danger)]" size={32} />
+                <div className="space-y-2">
+                    <p className="text-xs font-black uppercase text-[var(--danger)] tracking-widest">Aviso de Auditoria Ativa</p>
+                    <p className="text-sm text-[var(--text-secondary)] font-medium leading-relaxed">Todas as operações de alteração de papéis e permissões são registradas permanentemente para compliance com as normas de governança da Cidade Viva Education.</p>
+                </div>
+            </div>
         </div>
     );
 }
-
-function RoleBadge({ role }: { role: UserRole }) {
-    const config: any = {
-        'ADMIN': { bg: 'rgba(255,255,255,0.1)', color: 'white' },
-        'CONTROLADORIA': { bg: 'rgba(0,230,118,0.1)', color: 'var(--success)' },
-        'OPERACIONAL': { bg: 'rgba(41,121,255,0.1)', color: 'var(--secondary)' },
-        'GESTOR_FRENTE': { bg: 'rgba(255,171,0,0.1)', color: 'var(--warning)' },
-        'GESTOR_CC': { bg: 'rgba(255,87,34,0.1)', color: '#FF5722' },
-        'LEITOR': { bg: 'rgba(255,255,255,0.05)', color: '#666' },
-    };
-    const { bg, color } = config[role] || { bg: '#222', color: '#888' };
-    return (
-        <span style={{ padding: '4px 10px', borderRadius: '8px', fontSize: '10px', fontWeight: 800, background: bg, color: color }}>{role}</span>
-    );
-}
-
-function SecurityStat({ label, value, icon, color }: any) {
-    return (
-        <div className="card" style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <p style={{ fontSize: '11px', color: 'var(--text-disabled)', textTransform: 'uppercase' }}>{label}</p>
-                <div style={{ color: color }}>{icon}</div>
-            </div>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold' }}>{value}</h2>
-        </div>
-    );
-}
-
-const tabStyle = { padding: '16px 20px', fontSize: '13px', fontWeight: 700, background: 'transparent', border: 'none', cursor: 'pointer', transition: '0.2s' };
-const inputStyle = { width: '100%', background: '#0D0D0D', border: '1px solid #222', padding: '12px', borderRadius: '8px', color: 'white', fontSize: '13px', outline: 'none' };

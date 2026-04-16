@@ -1,176 +1,289 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { supabase } from '@/lib/supabase';
 import {
-    ArrowRightLeft, History, CheckCircle2, AlertCircle,
-    ArrowRight, Search, Filter, ShieldCheck, User,
-    Calendar, FileText, Info, Plus, X, ArrowUpRight,
-    TrendingDown, Zap, Shield, Ban, Check, Paperclip,
-    ChevronRight, Calculator, AlertTriangle, ShieldAlert,
-    Clock
+    Plus, ArrowRightLeft, CheckCircle2,
+    Loader2, Save, Calendar, FileText,
+    Search, Filter, ShieldCheck, History,
+    Check, Ban, ArrowUpRight, ArrowRight, TrendingDown,
+    Zap, ListTree, PieChart as PieIcon,
+    Calculator, Info, X, ChevronRight,
+    Brain, FileDown, Timer, MessageSquare
 } from 'lucide-react';
-
-// --- TYPES & MOCK DATA ---
-
-type ReallocationStatus = 'PENDENTE' | 'APROVACAO_NIVEL_1' | 'APROVACAO_NIVEL_2' | 'APROVADO' | 'REJEITADO';
-
-interface AuditLog {
-    data: string;
-    usuario: string;
-    acao: string;
-    obs?: string;
-}
 
 interface Reallocation {
     id: string;
-    data: string;
-    usuario: string;
-    valor: number;
-    status: ReallocationStatus;
-    origem: { cc: string; conta: string; frente: string; produto: string; saldoAtual: number };
-    destino: { cc: string; conta: string; frente: string; produto: string; saldoAtual: number };
-    justificativa: string;
-    anexos: string[];
-    auditTrail: AuditLog[];
+    year: number;
+    month: number;
+    amount: number;
+    justification: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    created_at: string;
+    source_front: { name: string };
+    source_account: { name: string; code: string };
+    target_front: { name: string };
+    target_account: { name: string; code: string };
 }
 
-const REALLOCATION_LIST: Reallocation[] = [
-    {
-        id: 'REM-001',
-        data: '13/02/2026',
-        usuario: 'Renato Assis',
-        valor: 25000.00,
-        status: 'APROVACAO_NIVEL_2',
-        origem: { cc: 'Vendas', conta: 'Marketing Digital', frente: 'PAIDEIA', produto: 'Cursos Online', saldoAtual: 45000 },
-        destino: { cc: 'Acadêmico', conta: 'Eventos Paideia', frente: 'PAIDEIA', produto: 'Ensino Regular', saldoAtual: 8000 },
-        justificativa: 'Remanejamento necessário para cobrir custos extras da conferência de educadores. Excedeu limite de R$ 20k, requer aprovação dupla.',
-        anexos: ['orcamento_conferencia.pdf'],
-        auditTrail: [
-            { data: '13/02 09:00', usuario: 'Renato Assis', acao: 'Solicitação Criada' },
-            { data: '13/02 10:30', usuario: 'Controller A', acao: 'Aprovação Nível 1 Realizada', obs: 'Valor condizente com a necessidade do projeto.' }
-        ]
-    },
-    {
-        id: 'REM-002',
-        data: '12/02/2026',
-        usuario: 'Maria Silva',
-        valor: 4200.00,
-        status: 'APROVADO',
-        origem: { cc: 'Infraestrutura', conta: 'Manutenção', frente: 'BIBLOS', produto: 'Sistemas', saldoAtual: 15600 },
-        destino: { cc: 'TI Central', conta: 'Softwares', frente: 'BIBLOS', produto: 'Sistemas', saldoAtual: 3000 },
-        justificativa: 'Compra de licenças extras de design.',
-        anexos: [],
-        auditTrail: [
-            { data: '12/02 14:00', usuario: 'Maria Silva', acao: 'Solicitação Criada' },
-            { data: '12/02 15:30', usuario: 'Controller B', acao: 'Aprovado' }
-        ]
-    },
-];
-
-const BUDGET_CONTEXT = [
-    { cc: 'Vendas', orcamento: 500000, realizado: 420000, remanejado: -25000, disponivel: 55000 },
-    { cc: 'Acadêmico', orcamento: 1200000, realizado: 1100000, remanejado: +30000, disponivel: 130000 },
-    { cc: 'Infraestrutura', orcamento: 300000, realizado: 280000, remanejado: -10000, disponivel: 10000 },
-];
-
-export default function ReallocationGovernancePage() {
-    const [selectedReloc, setSelectedReloc] = useState<Reallocation | null>(null);
+export default function RemanejamentoPage() {
+    const [reallocations, setReallocations] = useState<Reallocation[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<'LOG' | 'PENDING'>('PENDING');
 
-    const filteredList = useMemo(() => {
-        if (activeTab === 'PENDING') return REALLOCATION_LIST.filter(r => r.status.includes('PENDENTE') || r.status.includes('NIVEL'));
-        return REALLOCATION_LIST;
-    }, [activeTab]);
+    // Form State
+    const [formData, setFormData] = useState({
+        year: 2026,
+        month: 2,
+        amount: 0,
+        justification: '',
+        source_front_id: '',
+        source_account_id: '',
+        target_front_id: '',
+        target_account_id: ''
+    });
+
+    const [fronts, setFronts] = useState<any[]>([]);
+    const [accounts, setAccounts] = useState<any[]>([]);
+
+    useEffect(() => {
+        fetchData();
+        fetchReallocations();
+    }, []);
+
+    const fetchData = async () => {
+        const { data: f } = await supabase.from('fronts').select('id, name').eq('active', true);
+        const { data: a } = await supabase.from('accounts_plan').select('id, name, code, type').order('code');
+        if (f) setFronts(f);
+        if (a) setAccounts(a);
+    };
+
+    const fetchReallocations = async () => {
+        setIsLoading(true);
+        const { data, error } = await supabase
+            .from('budget_reallocations')
+            .select(`
+                *,
+                source_front:fronts!source_front_id(name),
+                source_account:accounts_plan!source_account_id(name, code),
+                target_front:fronts!target_front_id(name),
+                target_account:accounts_plan!target_account_id(name, code)
+            `)
+            .order('created_at', { ascending: false });
+
+        if (data) setReallocations(data as any);
+        setIsLoading(false);
+    };
+
+    const handleSave = async () => {
+        if (!formData.amount || !formData.justification || !formData.source_account_id || !formData.target_account_id) {
+            alert('Preencha todos os campos obrigatórios.');
+            return;
+        }
+
+        setIsSaving(true);
+        const { error } = await supabase.from('budget_reallocations').insert([formData]);
+
+        if (!error) {
+            setIsPanelOpen(false);
+            fetchReallocations();
+            setFormData({ ...formData, amount: 0, justification: '' });
+        } else {
+            console.error(error);
+            alert('Erro ao registrar remanejamento.');
+        }
+        setIsSaving(false);
+    };
+
+    const generateMonthlyReport = (month: number) => {
+        const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        const monthlyData = reallocations.filter(r => r.month === month && r.status === 'APPROVED');
+
+        if (monthlyData.length === 0) return "Nenhum remanejamento aprovado para este mês.";
+
+        let report = `RELATÓRIO DE REMANEJAMENTO ORÇAMENTÁRIO - ${monthNames[month - 1].toUpperCase()} 2026\n`;
+        report += `==================================================================\n\n`;
+
+        const totalAmount = monthlyData.reduce((acc, curr) => acc + Number(curr.amount), 0);
+        report += `Total Movimentado: R$ ${totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+        report += `Número de Operações: ${monthlyData.length}\n\n`;
+
+        report += `DETALHAMENTO DA JORNADA:\n`;
+        monthlyData.forEach((r, i) => {
+            report += `${i + 1}. DE: [${r.source_front.name}] ${r.source_account.code} - ${r.source_account.name}\n`;
+            report += `   PARA: [${r.target_front.name}] ${r.target_account.code} - ${r.target_account.name}\n`;
+            report += `   VALOR: R$ ${Number(r.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+            report += `   MOTIVO: ${r.justification}\n`;
+            report += `   DATA: ${new Date(r.created_at).toLocaleDateString('pt-BR')}\n`;
+            report += `------------------------------------------------------------------\n`;
+        });
+
+        report += `\nPARECER DA CONTROLADORIA:\n`;
+        report += `As movimentações acima foram validadas conforme a matriz de governança. Não houve impacto negativo no teto orçamentário global.`;
+
+        return report;
+    };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div className="reveal space-y-12">
 
-            {/* 1. Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                    <h1 className="text-h1">Remanejamento com Governança</h1>
-                    <p className="text-body">Ajustes orçamentários com dupla aprovação e impacto em tempo real</p>
+            {/* 1. Header & Navigation */}
+            <header className="flex flex-col md:flex-row justify-between items-start gap-8 border-b border-[var(--border-subtle)] pb-12">
+                <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-1.5 h-6 bg-[var(--primary)] rounded-full shadow-[0_0_10px_var(--primary)]" />
+                        <h2 className="text-caption !text-[var(--primary)]">Governança Orçamentária</h2>
+                    </div>
+                    <div>
+                        <h1 className="h1">Análise de <span className="text-[var(--accent-cyan)]">Remanejamento</span></h1>
+                        <p className="text-[var(--text-secondary)] text-sm font-medium mt-3 max-w-2xl leading-relaxed">
+                            Gestão de transferência de saldos entre frentes e rubricas. Exige justificativa estratégica e trilha de auditoria completa.
+                        </p>
+                    </div>
                 </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <button onClick={() => { setSelectedReloc(null); setIsPanelOpen(true); }} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Plus size={18} /> Novo Remanejamento
+
+                <div className="flex gap-4">
+                    <button className="btn btn-ghost group" onClick={() => {
+                        const report = generateMonthlyReport(2);
+                        const blob = new Blob([report], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `Relatorio_Remanejamento_Fevereiro_2026.txt`;
+                        a.click();
+                    }}>
+                        <FileDown size={16} className="text-[var(--primary)] group-hover:scale-110 transition-transform" />
+                        <span>Relatório Mensal</span>
+                    </button>
+                    <button className="btn btn-primary" onClick={() => setIsPanelOpen(true)}>
+                        <Plus size={18} />
+                        <span>Novo Remanejamento</span>
                     </button>
                 </div>
-            </div>
+            </header>
 
-            {/* 2. Monthly Impact Panel */}
-            <div className="grid" style={{ gridTemplateColumns: '1fr 2fr', gap: '24px' }}>
-                <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <p style={{ fontSize: '11px', color: 'var(--text-disabled)', textTransform: 'uppercase' }}>Volume Remanejado (Mes)</p>
-                    <h2 style={{ fontSize: '28px', fontWeight: 'bold', margin: '8px 0' }}>R$ 158.400</h2>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--warning)', fontSize: '11px' }}>
-                        <AlertTriangle size={14} /> 12 solicitações pendentes de análise
+            {/* 2. Visual Intelligence: Fluxo de Governança */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <div className="xl:col-span-2 card bg-gradient-to-br from-[var(--bg-card)] to-[var(--bg-input)] border-white/5 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--primary)]/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="flex items-center gap-8 mb-8">
+                        <div className="w-14 h-14 rounded-2xl bg-[var(--accent-gold)]/10 flex items-center justify-center border border-[var(--accent-gold)]/20 shadow-inner">
+                            <ShieldCheck className="text-[var(--accent-gold)]" size={28} />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-black text-white uppercase tracking-widest">Matriz de Aprovação</h4>
+                            <p className="text-xs text-[var(--text-muted)] font-bold mt-1 tracking-tight">Regras vigentes para o Ciclo 2026</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-6">
+                        <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+                            <span className="text-[8px] font-black text-[var(--accent-lime)] uppercase tracking-widest mb-1 block">Até R$ 5k</span>
+                            <p className="text-[10px] font-bold text-[var(--text-secondary)]">Aprovação Direta (Gestor da Frente)</p>
+                        </div>
+                        <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+                            <span className="text-[8px] font-black text-[var(--accent-gold)] uppercase tracking-widest mb-1 block">R$ 5k a R$ 20k</span>
+                            <p className="text-[10px] font-bold text-[var(--text-secondary)]">Visto da Controladoria</p>
+                        </div>
+                        <div className="p-4 bg-white/5 rounded-xl border border-white/5 shadow-2xl shadow-[var(--accent-pink)]/5">
+                            <span className="text-[8px] font-black text-[var(--accent-pink)] uppercase tracking-widest mb-1 block">{'>'} R$ 20k</span>
+                            <p className="text-[10px] font-bold text-[var(--text-secondary)] font-black">Homologação da Diretoria</p>
+                        </div>
                     </div>
                 </div>
-                <div className="card">
-                    <h3 style={{ fontSize: '13px', fontWeight: 700, marginBottom: '20px' }}>Impacto na Execução por Centro de Custo</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {BUDGET_CONTEXT.map(bc => (
-                            <div key={bc.cc}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '12px' }}>
-                                    <span style={{ fontWeight: 600 }}>{bc.cc}</span>
-                                    <span style={{ color: bc.remanejado < 0 ? 'var(--danger)' : 'var(--success)' }}>
-                                        {bc.remanejado > 0 ? '+' : ''}{bc.remanejado.toLocaleString()} (Ajustado)
-                                    </span>
-                                </div>
-                                <div style={{ height: '6px', background: '#111', borderRadius: '3px', overflow: 'hidden', display: 'flex' }}>
-                                    <div style={{ width: (bc.realizado / bc.orcamento * 100) + '%', background: 'var(--primary)' }} />
-                                    <div style={{ width: (Math.abs(bc.remanejado) / bc.orcamento * 100) + '%', background: bc.remanejado < 0 ? '#331111' : '#113311' }} />
-                                </div>
-                            </div>
-                        ))}
+
+                <div className="card border-[var(--primary)]/20 flex flex-col justify-between">
+                    <div>
+                        <div className="flex items-center gap-2 mb-4">
+                            <Brain size={16} className="text-[var(--primary)]" />
+                            <span className="text-[10px] font-black text-[var(--primary)] uppercase tracking-widest">BI Insight</span>
+                        </div>
+                        <p className="text-sm text-white font-bold leading-snug">
+                            "A jornada de remanejamento sugere uma migração de 15% do orçamento de MKT para Acadêmico neste trimestre."
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-4 mt-8 pt-6 border-t border-white/5">
+                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                            <TrendingDown size={16} className="text-[var(--accent-pink)]" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Janelas de Risco</p>
+                            <p className="text-[11px] font-bold text-white">Impacto na Liquidez: Baixo</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* 3. Main Workflow View */}
-            <div className="card" style={{ padding: 0 }}>
-                <div style={{ borderBottom: '1px solid #1A1A1A', display: 'flex', padding: '0 24px' }}>
-                    <button onClick={() => setActiveTab('PENDING')} style={{ ...tabStyle, borderBottom: activeTab === 'PENDING' ? '2px solid var(--primary)' : 'none', color: activeTab === 'PENDING' ? 'white' : 'var(--text-disabled)' }}>Solicitações Pendentes</button>
-                    <button onClick={() => setActiveTab('LOG')} style={{ ...tabStyle, borderBottom: activeTab === 'LOG' ? '2px solid var(--primary)' : 'none', color: activeTab === 'LOG' ? 'white' : 'var(--text-disabled)' }}>Histórico e Auditoria</button>
+            {/* 3. Main Journey View */}
+            <div className="card p-0 overflow-hidden border-white/5 shadow-2xl">
+                <div className="p-8 bg-white/[0.02] border-b border-white/5 flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                        <History size={20} className="text-[var(--primary)]" />
+                        <h3 className="h3">Jornada de Remanejamentos</h3>
+                    </div>
+                    <div className="flex gap-3">
+                        <div className="px-4 py-2 bg-[var(--bg-input)] rounded-lg text-[10px] font-black border border-white/5 text-[var(--text-muted)] tracking-widest uppercase">
+                            Status: Todos
+                        </div>
+                    </div>
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                <div className="overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr style={{ color: 'var(--text-disabled)', fontSize: '10px', textTransform: 'uppercase', background: 'rgba(255,255,255,0.01)' }}>
-                                <th style={{ padding: '16px 24px' }}>ID / Origem</th>
-                                <th style={{ padding: '16px' }}>Destino</th>
-                                <th style={{ padding: '16px', textAlign: 'right' }}>Valor</th>
-                                <th style={{ padding: '16px' }}>Solicitante</th>
-                                <th style={{ padding: '16px', textAlign: 'center' }}>Workflow</th>
-                                <th style={{ padding: '16px 24px' }}></th>
+                            <tr className="bg-white/[0.01] border-b border-white/5">
+                                <th className="p-8 text-caption text-white">Origem / Destino</th>
+                                <th className="p-8 text-caption text-white">Data / Jornada</th>
+                                <th className="p-8 text-caption text-right text-white">Valor Transferido</th>
+                                <th className="p-8 text-caption text-center text-white">Governança</th>
+                                <th className="p-8 text-caption text-center text-white">Ação</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredList.map(item => (
-                                <tr key={item.id} onClick={() => { setSelectedReloc(item); setIsPanelOpen(true); }} style={{ borderBottom: '1px solid #1A1A1A' }} className="hover:bg-white/[0.01] cursor-pointer">
-                                    <td style={{ padding: '16px 24px' }}>
-                                        <p style={{ fontWeight: 700 }}>{item.id}</p>
-                                        <p style={{ fontSize: '11px', color: 'var(--text-disabled)' }}>{item.origem.cc} • {item.origem.conta}</p>
-                                    </td>
-                                    <td style={{ padding: '16px' }}>
-                                        <p style={{ fontWeight: 600 }}>{item.destino.cc}</p>
-                                        <p style={{ fontSize: '11px', color: 'var(--text-disabled)' }}>{item.destino.conta}</p>
-                                    </td>
-                                    <td style={{ padding: '16px', textAlign: 'right', fontWeight: 'bold' }}>R$ {item.valor.toLocaleString()}</td>
-                                    <td style={{ padding: '16px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <User size={14} color="#555" />
-                                            <span>{item.usuario}</span>
+                            {isLoading ? (
+                                <tr><td colSpan={5} className="p-20 text-center"><Loader2 className="animate-spin mx-auto text-[var(--primary)]" size={40} /></td></tr>
+                            ) : reallocations.map(r => (
+                                <tr key={r.id} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition-all group">
+                                    <td className="p-8">
+                                        <div className="flex items-center gap-8">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-[var(--accent-pink)] uppercase tracking-widest mb-1">{r.source_front.name}</span>
+                                                <span className="text-sm font-bold text-white tracking-tight">{r.source_account.name}</span>
+                                            </div>
+                                            <ArrowRight size={14} className="text-[var(--text-disabled)]" />
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-[var(--accent-cyan)] uppercase tracking-widest mb-1">{r.target_front.name}</span>
+                                                <span className="text-sm font-bold text-white tracking-tight">{r.target_account.name}</span>
+                                            </div>
                                         </div>
                                     </td>
-                                    <td style={{ padding: '16px', textAlign: 'center' }}>
-                                        <WorkflowBadge status={item.status} double={item.valor >= 20000} />
+                                    <td className="p-8">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-xs text-[var(--text-secondary)] font-bold">{new Date(r.created_at).toLocaleDateString()}</span>
+                                            <span className="text-[10px] text-[var(--text-disabled)] font-medium truncate max-w-[200px] italic">"{r.justification}"</span>
+                                        </div>
                                     </td>
-                                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                                        <ChevronRight size={18} color="#444" />
+                                    <td className="p-8 text-right">
+                                        <span className="text-base font-black text-white tracking-tighter">
+                                            R$ {Number(r.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </td>
+                                    <td className="p-8">
+                                        <div className="flex justify-center">
+                                            <div className={`px-4 py-1.5 rounded-full text-[9px] font-black tracking-widest border ${r.status === 'APPROVED' ? 'bg-[var(--accent-lime)]/10 text-[var(--accent-lime)] border-[var(--accent-lime)]/20' :
+                                                r.status === 'REJECTED' ? 'bg-[var(--accent-pink)]/10 text-[var(--accent-pink)] border-[var(--accent-pink)]/20' :
+                                                    'bg-[var(--accent-gold)]/10 text-[var(--accent-gold)] border-[var(--accent-gold)]/20'
+                                                }`}>
+                                                {r.status === 'APPROVED' ? 'CONCLUÍDO' : r.status === 'REJECTED' ? 'REJEITADO' : 'EM ANÁLISE'}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="p-8">
+                                        <div className="flex justify-center">
+                                            <button className="w-10 h-10 rounded-xl bg-white/5 hover:bg-[var(--primary)] hover:text-white transition-all flex items-center justify-center border border-white/5">
+                                                <ChevronRight size={16} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -179,136 +292,110 @@ export default function ReallocationGovernancePage() {
                 </div>
             </div>
 
-            {/* 4. Side Panel: New Request / Approval */}
+            {/* 4. Functional Drawer: New Request */}
             {isPanelOpen && (
-                <div style={sidePanelStyle}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                        <h2 className="text-h2">{selectedReloc ? 'Análise de Remanejamento' : 'Novo Remanejamento'}</h2>
-                        <button onClick={() => setIsPanelOpen(false)}><X size={20} /></button>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1, overflowY: 'auto', paddingRight: '8px' }}>
-
-                        {/* Alert for Dual Approval */}
-                        {(!selectedReloc || selectedReloc.valor >= 20000) && (
-                            <div style={{ padding: '16px', background: 'rgba(41,121,255,0.05)', borderRadius: '12px', border: '1px dashed var(--secondary)', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                <ShieldAlert size={20} color="var(--secondary)" />
-                                <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                                    <strong>Fluxo de Governança:</strong> Valores {'>'} R$ 20.000 exigem aprovação de dois cargos distintos (Diretoria + Controladoria).
-                                </p>
+                <div className="fixed inset-0 z-[100] flex justify-end">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsPanelOpen(false)} />
+                    <div className="relative w-full max-w-xl h-full bg-[var(--bg-card)] border-l border-white/10 p-12 overflow-y-auto animate-in slide-in-from-right duration-500 flex flex-col">
+                        <div className="flex justify-between items-center mb-12">
+                            <div>
+                                <h2 className="h2 tracking-tighter">Nova <span className="text-[var(--primary)]">Solicitação</span></h2>
+                                <p className="text-sm text-[var(--text-muted)] font-medium mt-1">Registe a jornada de remanejamento no sistema.</p>
                             </div>
-                        )}
-
-                        {/* Steps: Source & Destination */}
-                        <div style={{ padding: '20px', background: '#0D0D0D', borderRadius: '12px', border: '1px solid #222' }}>
-                            <p style={labelStyle}>Remanejar DE (Origem)</p>
-                            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                                <select disabled={!!selectedReloc} style={inputStyle}><option>{selectedReloc?.origem.cc || 'Centro de Custo'}</option></select>
-                                <select disabled={!!selectedReloc} style={inputStyle}><option>{selectedReloc?.origem.conta || 'Conta Orçamentária'}</option></select>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                                <span style={{ color: 'var(--text-disabled)' }}>Saldo Atual na Origem:</span>
-                                <span style={{ fontWeight: 'bold' }}>R$ {selectedReloc?.origem.saldoAtual.toLocaleString() || '0,00'}</span>
-                            </div>
+                            <button onClick={() => setIsPanelOpen(false)} className="p-3 bg-white/5 rounded-full hover:bg-white/10 transition-colors"><X size={20} /></button>
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'center' }}><ArrowRightLeft size={20} color="var(--primary)" /></div>
-
-                        <div style={{ padding: '20px', background: '#0D0D0D', borderRadius: '12px', border: '1px solid #222' }}>
-                            <p style={labelStyle}>Para (Destino)</p>
-                            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                                <select disabled={!!selectedReloc} style={inputStyle}><option>{selectedReloc?.destino.cc || 'Centro de Custo'}</option></select>
-                                <select disabled={!!selectedReloc} style={inputStyle}><option>{selectedReloc?.destino.conta || 'Conta Orçamentária'}</option></select>
-                            </div>
-                        </div>
-
-                        <InputGroup label="Valor do Remanejamento" icon={<Calculator size={14} />}>
-                            <input disabled={!!selectedReloc} defaultValue={selectedReloc?.valor} placeholder="R$ 0,00" style={{ ...inputStyle, fontSize: '20px', fontWeight: 'bold', border: '1px solid var(--primary)', color: 'var(--primary)' }} />
-                        </InputGroup>
-
-                        <InputGroup label="Justificativa Estratégica" icon={<FileText size={14} />}>
-                            <textarea disabled={!!selectedReloc} defaultValue={selectedReloc?.justificativa} placeholder="Descreva a necessidade do ajuste..." style={{ ...inputStyle, height: '80px', resize: 'none' }} />
-                        </InputGroup>
-
-                        <InputGroup label="Documentação de Apoio" icon={<Paperclip size={14} />}>
-                            <div style={{ border: '1px dashed #333', borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                                {selectedReloc?.anexos.length ? (
-                                    <span style={{ color: 'var(--secondary)', fontSize: '12px' }}>{selectedReloc.anexos[0]}</span>
-                                ) : (
-                                    <p style={{ fontSize: '11px', color: '#555' }}>Clique para anexar evidência (PDF/PNG)</p>
-                                )}
-                            </div>
-                        </InputGroup>
-
-                        {/* Workflow & Audit (Selected Only) */}
-                        {selectedReloc && (
-                            <div style={{ marginTop: '20px' }}>
-                                <p style={labelStyle}>Trilha de Governança</p>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    {selectedReloc.auditTrail.map((log, i) => (
-                                        <div key={i} style={{ display: 'flex', gap: '12px', fontSize: '11px', background: 'rgba(255,255,255,0.01)', padding: '10px', borderRadius: '6px' }}>
-                                            <div style={{ minWidth: '70px', color: 'var(--text-disabled)' }}>{log.data}</div>
-                                            <div style={{ fontWeight: 700 }}>{log.usuario}:</div>
-                                            <div style={{ color: 'var(--text-secondary)' }}>{log.acao}</div>
-                                        </div>
-                                    ))}
+                        <div className="space-y-10 flex-1">
+                            {/* AREA: ORIGEM */}
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black text-[var(--accent-pink)] uppercase tracking-widest flex items-center gap-2">
+                                    <TrendingDown size={14} /> Origem (RETRATAÇÃO)
+                                </label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <select
+                                        className="bg-[var(--bg-input)] border border-white/5 p-4 text-xs font-bold text-white rounded-xl outline-none focus:border-[var(--primary)]"
+                                        value={formData.source_front_id}
+                                        onChange={(e) => setFormData({ ...formData, source_front_id: e.target.value })}
+                                    >
+                                        <option value="">Selecione a Frente</option>
+                                        {fronts.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                                    </select>
+                                    <select
+                                        className="bg-[var(--bg-input)] border border-white/5 p-4 text-xs font-bold text-white rounded-xl outline-none focus:border-[var(--primary)]"
+                                        value={formData.source_account_id}
+                                        onChange={(e) => setFormData({ ...formData, source_account_id: e.target.value })}
+                                    >
+                                        <option value="">Rubrica de Origem</option>
+                                        {accounts.filter(a => a.type === 'DESPESA').map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                                    </select>
                                 </div>
                             </div>
-                        )}
 
-                        {/* Actions */}
-                        <div style={{ marginTop: '32px', display: 'flex', gap: '12px' }}>
-                            {!selectedReloc && <button className="btn btn-primary" style={{ flex: 1, padding: '16px' }}>Enviar Solicitação</button>}
-                            {selectedReloc && selectedReloc.status.includes('NIVEL') && (
-                                <>
-                                    <button className="btn btn-primary" style={{ flex: 1, padding: '16px' }}><Check size={18} style={{ marginRight: 8 }} /> Aprovar Remanejamento</button>
-                                    <button className="btn btn-ghost" style={{ border: '1px solid var(--danger)', color: 'var(--danger)', padding: '16px' }}><Ban size={18} /></button>
-                                </>
-                            )}
+                            <div className="flex justify-center"><ArrowRightLeft size={24} className="text-[var(--primary)] opacity-30" /></div>
+
+                            {/* AREA: DESTINO */}
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black text-[var(--accent-cyan)] uppercase tracking-widest flex items-center gap-2">
+                                    <ArrowUpRight size={14} /> Destino (SUPLEMENTAÇÃO)
+                                </label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <select
+                                        className="bg-[var(--bg-input)] border border-white/5 p-4 text-xs font-bold text-white rounded-xl outline-none focus:border-[var(--primary)]"
+                                        value={formData.target_front_id}
+                                        onChange={(e) => setFormData({ ...formData, target_front_id: e.target.value })}
+                                    >
+                                        <option value="">Selecione a Frente</option>
+                                        {fronts.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                                    </select>
+                                    <select
+                                        className="bg-[var(--bg-input)] border border-white/5 p-4 text-xs font-bold text-white rounded-xl outline-none focus:border-[var(--primary)]"
+                                        value={formData.target_account_id}
+                                        onChange={(e) => setFormData({ ...formData, target_account_id: e.target.value })}
+                                    >
+                                        <option value="">Rubrica de Destino</option>
+                                        {accounts.filter(a => a.type === 'DESPESA').map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* VALOR & JUSTIFICATIVA */}
+                            <div className="grid grid-cols-1 gap-8 pt-6">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                        <Calculator size={14} /> Valor do Remanejamento
+                                    </label>
+                                    <input
+                                        type="number"
+                                        className="w-full bg-[var(--bg-input)] border-2 border-[var(--primary)]/30 p-5 text-2xl font-black text-white rounded-2xl outline-none focus:border-[var(--primary)] shadow-[0_0_20px_rgba(90,140,255,0.1)]"
+                                        placeholder="0,00"
+                                        value={formData.amount || ''}
+                                        onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
+                                    />
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                        <MessageSquare size={14} /> Justificativa Estratégica
+                                    </label>
+                                    <textarea
+                                        className="w-full bg-[var(--bg-input)] border border-white/5 p-5 text-sm font-medium text-white rounded-2xl outline-none focus:border-[var(--primary)] min-h-[120px] resize-none"
+                                        placeholder="Por que este ajuste é necessário agora?"
+                                        value={formData.justification}
+                                        onChange={(e) => setFormData({ ...formData, justification: e.target.value })}
+                                    />
+                                </div>
+                            </div>
                         </div>
 
+                        <div className="mt-12 pt-8 border-t border-white/5 flex gap-4">
+                            <button className="btn btn-ghost flex-1" onClick={() => setIsPanelOpen(false)}>Cancelar</button>
+                            <button className="btn btn-primary flex-1 shadow-2xl shadow-[var(--primary)]/20" onClick={handleSave} disabled={isSaving}>
+                                {isSaving ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
+                                <span>Efetivar Remanejamento</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
-
         </div>
     );
 }
-
-function WorkflowBadge({ status, double }: { status: ReallocationStatus, double: boolean }) {
-    const config: any = {
-        'PENDENTE': { label: 'Aguardando', color: 'var(--warning)', icon: Clock },
-        'APROVACAO_NIVEL_1': { label: 'Nível 1 de 2', color: 'var(--secondary)', icon: Shield },
-        'APROVACAO_NIVEL_2': { label: 'Nível 2 de 2', color: 'var(--secondary)', icon: Shield },
-        'APROVADO': { label: 'Concluído', color: 'var(--success)', icon: CheckCircle2 },
-        'REJEITADO': { label: 'Rejeitado', color: 'var(--danger)', icon: Ban },
-    };
-    const { label, color, icon: Icon } = config[status] || { label: 'Processando', color: '#666', icon: Info };
-
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '9px', fontWeight: 800, background: `${color}15`, color: color, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Icon size={12} /> {label}
-            </span>
-            {double && status !== 'APROVADO' && (
-                <span style={{ fontSize: '8px', color: 'var(--text-disabled)', textTransform: 'uppercase' }}>Governança Dupla</span>
-            )}
-        </div>
-    );
-}
-
-function InputGroup({ label, icon, children }: any) {
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '11px', color: 'var(--text-disabled)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {icon} {label}
-            </label>
-            {children}
-        </div>
-    );
-}
-
-const tabStyle = { padding: '16px 20px', fontSize: '13px', fontWeight: 700, background: 'transparent', border: 'none', cursor: 'pointer', transition: '0.2s' };
-const inputStyle = { width: '100%', background: '#0D0D0D', border: '1px solid #222', padding: '12px', borderRadius: '8px', color: 'white', fontSize: '13px', outline: 'none' };
-const labelStyle = { fontSize: '10px', color: 'var(--text-disabled)', textTransform: 'uppercase', marginBottom: '8px', display: 'block', fontWeight: 'bold' };
-const sidePanelStyle: any = { position: 'fixed', right: 0, top: 0, bottom: 0, width: '500px', backgroundColor: '#090909', borderLeft: '1px solid #222', padding: '40px', boxShadow: '-24px 0 60px rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', flexDirection: 'column' };

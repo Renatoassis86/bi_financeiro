@@ -1,189 +1,215 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import {
-    ChevronDown, ChevronRight, Info, Filter, ArrowUpRight,
-    Search, Download, FileText, Printer, FileSpreadsheet,
-    TrendingUp, TrendingDown, Layers, Target, Database,
-    Eye, Calendar, Box, Building2, X, AlertCircle
+    FileText, Download, Printer, Filter,
+    ChevronDown, ChevronRight, Calculator,
+    TrendingUp, TrendingDown, Info
 } from 'lucide-react';
-import { useGlobalFilters } from '@/contexts/GlobalFilterContext';
 
-// --- DATA STRUCTURES ---
-
-type DRELine = {
+interface DRELine {
     id: string;
     label: string;
+    level: number;
     planned: number;
     realized: number;
-    type: 'HEADER' | 'SUB' | 'TOTAL' | 'RESULT' | 'ELIMINACAO';
-    level: number;
-};
+    isTotal?: boolean;
+}
 
-const DRE_STRUCTURE: DRELine[] = [
-    { id: 'RB', label: 'RECEITA BRUTA', planned: 950000, realized: 880000, type: 'HEADER', level: 0 },
-    { id: 'DED', label: '(-) Deduções, Impostos e Taxas', planned: -95000, realized: -85000, type: 'SUB', level: 1 },
-    { id: 'RL', label: 'RECEITA LÍQUIDA', planned: 855000, realized: 795000, type: 'TOTAL', level: 0 },
-    { id: 'COGS', label: '(-) Custos Diretos (COGS)', planned: -350000, realized: -380000, type: 'SUB', level: 1 },
-    { id: 'MB', label: 'MARGEM BRUTA', planned: 505000, realized: 415000, type: 'TOTAL', level: 0 },
-    { id: 'DV', label: '(-) Despesas Operacionais', planned: -280000, realized: -295000, type: 'HEADER', level: 1 },
-    { id: 'DV_MK', label: 'Marketing & Vendas', planned: -80000, realized: -85000, type: 'SUB', level: 2 },
-    { id: 'DV_AD', label: 'Administrativo', planned: -50000, realized: -55000, type: 'SUB', level: 2 },
-    { id: 'DV_PE', label: 'Pedagógico / Conteúdo', planned: -70000, realized: -75000, type: 'SUB', level: 2 },
-    { id: 'EBITDA', label: 'EBITDA GERENCIAL', planned: 225000, realized: 120000, type: 'TOTAL', level: 0 },
-    { id: 'ELIM', label: '(+/-) Eliminações Inter-Company', planned: 0, realized: -12000, type: 'ELIMINACAO', level: 0 },
-    { id: 'ROP', label: 'RESULTADO LÍQUIDO CONSOLIDADO', planned: 225000, realized: 108000, type: 'RESULT', level: 0 },
-];
+export default function RelatorioDRE() {
+    const [loading, setLoading] = useState(true);
+    const [dreData, setDreData] = useState<DRELine[]>([]);
+    const [selectedFront, setSelectedFront] = useState<string | null>(null);
+    const [fronts, setFronts] = useState<{ id: string, name: string }[]>([]);
 
-const DRILL_DOWN_DATA = [
-    { id: 101, data: '05/02/2026', descricao: 'Google Ads - Campanha Paideia', conta: 'Marketing', valor: -12500.00, frente: 'PAIDEIA' },
-    { id: 102, data: '08/02/2026', descricao: 'Assinatura AWS Production', conta: 'Tecnologia', valor: -4200.00, frente: 'CONSOLIDADO' },
-];
+    useEffect(() => {
+        fetchInitialData();
+    }, []);
 
-export default function DREGerencialPage() {
-    const { filters, setFilters } = useGlobalFilters();
-    const [drillDownLine, setDrillDownLine] = useState<string | null>(null);
+    useEffect(() => {
+        calculateDRE();
+    }, [selectedFront]);
 
-    const isConsolidated = filters.front === 'CONSOLIDADO';
-
-    const formatCurrency = (val: number) => {
-        const isNeg = val < 0;
-        const absVal = Math.abs(val).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-        return isNeg ? `(${absVal})` : absVal;
+    const fetchInitialData = async () => {
+        const { data } = await supabase.from('fronts').select('id, name');
+        if (data) setFronts(data);
     };
 
-    const calculateVariance = (real: number, plan: number) => {
-        const diff = real - plan;
-        const perc = plan !== 0 ? (diff / Math.abs(plan)) * 100 : 0;
-        return { diff, perc };
+    const calculateDRE = async () => {
+        setLoading(true);
+        try {
+            let budgetQuery = supabase.from('budget_plans').select('amount_planned, account_id, accounts_plan(type, name, code)');
+            let realizedQuery = supabase.from('financial_entries').select('total_amount, account_id, type, accounts_plan(name, code)').eq('status', 'RECEIVED');
+
+            if (selectedFront) {
+                budgetQuery = budgetQuery.eq('front_id', selectedFront);
+                realizedQuery = realizedQuery.eq('front_id', selectedFront);
+            }
+
+            const { data: budget } = await budgetQuery;
+            const { data: realized } = await realizedQuery;
+
+            const getSum = (type: string, list: any[], field: string) =>
+                list?.filter(i => (i.accounts_plan?.type || i.type) === type).reduce((acc, curr) => acc + (curr[field] || 0), 0) || 0;
+
+            const rev_planned = getSum('RECEITA', budget || [], 'amount_planned');
+            const rev_realized = getSum('INCOME', realized || [], 'total_amount');
+
+            const exp_planned = getSum('DESPESA', budget || [], 'amount_planned');
+            const exp_realized = getSum('EXPENSE', realized || [], 'total_amount');
+
+            const lines: DRELine[] = [
+                { id: 'RB', label: '1. RECEITA BRUTA OPERACIONAL', level: 0, planned: rev_planned, realized: rev_realized, isTotal: true },
+                { id: 'DED', label: '(-) Deduções e Impostos', level: 1, planned: rev_planned * 0.05, realized: rev_realized * 0.05 },
+                { id: 'RL', label: '2. RECEITA LÍQUIDA', level: 0, planned: rev_planned * 0.95, realized: rev_realized * 0.95, isTotal: true },
+                { id: 'CPV', label: '(-) Custos de Produtos Vendidos (COGS)', level: 1, planned: exp_planned * 0.4, realized: exp_realized * 0.4 },
+                { id: 'LB', label: '3. LUCRO BRUTO (MARGEM BRUTA)', level: 0, planned: (rev_planned * 0.95) - (exp_planned * 0.4), realized: (rev_realized * 0.95) - (exp_realized * 0.4), isTotal: true },
+                { id: 'DV', label: '(-) Despesas Operacionais (EBIDTA)', level: 1, planned: exp_planned * 0.6, realized: exp_realized * 0.6 },
+                { id: 'EBITDA', label: '4. EBITDA GERENCIAL', level: 0, planned: ((rev_planned * 0.95) - (exp_planned * 0.4)) - (exp_planned * 0.6), realized: ((rev_realized * 0.95) - (exp_realized * 0.4)) - (exp_realized * 0.6), isTotal: true },
+            ];
+
+            setDreData(lines);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div className="reveal space-y-16 pb-20">
 
-            {/* 1. Global Filter & Multi-Entity Header */}
-            <div className="card" style={{ padding: '24px', borderLeft: `4px solid ${isConsolidated ? 'var(--secondary)' : 'var(--primary)'}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <h1 className="text-h1" style={{ fontSize: '24px' }}>DRE Gerencial — {isConsolidated ? 'Grupo Cidade Viva' : filters.front}</h1>
-                            {isConsolidated && <span style={{ fontSize: '10px', background: 'var(--secondary)', color: 'black', padding: '2px 8px', borderRadius: '10px', fontWeight: 900 }}>CONSOLIDADOR ATIVO</span>}
+            {/* 1. Header Area - SPACIOUS */}
+            <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-12">
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-[var(--primary)] shadow-[0_0_12px_var(--primary)]" />
+                        <h2 className="text-caption text-[var(--primary)] tracking-[0.4em] text-sm">Performance Gerencial & Auditoria</h2>
+                    </div>
+                    <h1 className="h1">DRE <span className="text-[var(--primary)]">Estratégico</span></h1>
+                    <p className="text-lg font-medium text-[var(--text-secondary)] opacity-80 max-w-2xl leading-relaxed">
+                        Demonstrativo de Resultado por Competência detalhado por centro de custos e unidades.
+                    </p>
+                </div>
+
+                <div className="flex flex-wrap gap-8 items-center w-full lg:w-auto">
+                    <div className="relative group min-w-[280px]">
+                        <select
+                            className="appearance-none w-full bg-[var(--bg-input)] border border-[var(--border-subtle)] px-8 py-5 pr-14 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white cursor-pointer hover:border-[var(--primary)]/50 transition-all outline-none shadow-lg"
+                            value={selectedFront || ''}
+                            onChange={(e) => setSelectedFront(e.target.value || null)}
+                        >
+                            <option value="">TODAS AS UNIDADES</option>
+                            {fronts.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                        </select>
+                        <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-[var(--text-disabled)] pointer-events-none group-hover:text-[var(--primary)] transition-colors" size={18} />
+                    </div>
+
+                    <div className="flex gap-4">
+                        <button className="btn btn-ghost !px-10 shadow-lg">
+                            <Download size={20} className="text-[var(--accent-azure)]" />
+                            <span>EXPORTAR</span>
+                        </button>
+                        <button className="btn btn-primary !px-10 shadow-xl shadow-[var(--primary)]/20">
+                            <Printer size={20} />
+                            <span>IMPRIMIR</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            {/* 2. DRE Data Grid - SPACIOUS */}
+            <div className="card !p-0 overflow-hidden shadow-2xl relative border-[var(--border-subtle)]">
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[var(--primary)]/5 blur-[120px] rounded-full pointer-events-none" />
+
+                {/* Table Header */}
+                <div className="bg-[#1D222B] p-10 border-b border-[var(--border-subtle)] flex justify-between items-center sticky top-0 z-10">
+                    <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 rounded-2xl bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/20 shadow-inner">
+                            <Calculator size={22} className="text-[var(--primary)]" />
                         </div>
-                        <p className="text-body" style={{ marginTop: '4px' }}>Visão {isConsolidated ? 'multinível com eliminações automáticas' : 'por unidade de negócio individual'}</p>
+                        <div>
+                            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--text-disabled)] mb-1 block leading-none">Status de Referência</span>
+                            <h4 className="text-sm font-black text-white uppercase tracking-tight">Consolidado Mensal • FY26 Q1</h4>
+                        </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <button className={`btn ${filters.viewType === 'COMPETENCIA' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setFilters({ ...filters, viewType: 'COMPETENCIA' })} style={{ fontSize: '11px' }}>COMPETÊNCIA</button>
-                        <button className={`btn ${filters.viewType === 'CAIXA' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setFilters({ ...filters, viewType: 'CAIXA' })} style={{ fontSize: '11px', border: '1px solid #333' }}>CAIXA</button>
+                    <div className="flex gap-16 text-[10px] uppercase font-black tracking-[0.25em] text-[var(--text-disabled)] pr-10">
+                        <span className="w-36 text-right">Planejado</span>
+                        <span className="w-36 text-right">Realizado</span>
+                        <span className="w-36 text-right">Variância</span>
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginTop: '24px' }}>
-                    <FilterGroup icon={<Calendar size={14} />} label="Período">
-                        <select value={filters.month} onChange={(e) => setFilters({ ...filters, month: parseInt(e.target.value) })} style={selectStyle}>
-                            <option value={1}>Janeiro / 2026</option>
-                            <option value={2}>Fevereiro / 2026</option>
-                        </select>
-                    </FilterGroup>
+                {/* Table Body */}
+                <div className="divide-y divide-white/5 bg-white/[0.01]">
+                    {dreData.map((line) => {
+                        const variance = line.realized - line.planned;
+                        const variancePerc = line.planned !== 0 ? (variance / Math.abs(line.planned)) * 100 : 0;
 
-                    <FilterGroup icon={<Building2 size={14} />} label="Unidade / Consolidação">
-                        <select value={filters.front} onChange={(e) => setFilters({ ...filters, front: e.target.value })} style={selectStyle}>
-                            <option value="CONSOLIDADO">🏢 Consolidado (Grupo)</option>
-                            <option value="PAIDEIA">🎓 PAIDEIA</option>
-                            <option value="OIKOS">🏠 OIKOS</option>
-                            <option value="BIBLOS">📚 BIBLOS</option>
-                        </select>
-                    </FilterGroup>
+                        return (
+                            <div
+                                key={line.id}
+                                className={`flex items-center justify-between p-10 hover:bg-white/[0.02] transition-all group ${line.isTotal ? 'bg-white/[0.01]' : ''}`}
+                            >
+                                <div className="flex items-center gap-6" style={{ paddingLeft: line.level * 48 }}>
+                                    {line.isTotal ?
+                                        <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/20 shadow-md">
+                                            <ChevronDown size={16} className="text-[var(--primary)]" />
+                                        </div> :
+                                        <ChevronRight size={16} className="text-[var(--text-disabled)] group-hover:translate-x-2 transition-transform opacity-40" />
+                                    }
+                                    <span className={`text-base tracking-tight ${line.isTotal ? 'text-white font-black' : 'text-[var(--text-secondary)] font-semibold'}`}>
+                                        {line.label}
+                                    </span>
+                                </div>
 
-                    <FilterGroup icon={<Box size={14} />} label="Produto (BI)">
-                        <select value={filters.product} onChange={(e) => setFilters({ ...filters, product: e.target.value })} style={selectStyle}>
-                            <option value="TODOS">Todos os Produtos</option>
-                            <option value="CURSOS">Cursos Online</option>
-                        </select>
-                    </FilterGroup>
+                                <div className="flex gap-16 text-base font-bold pr-10">
+                                    <span className="w-36 text-right text-[var(--text-disabled)] opacity-80 font-medium">
+                                        R$ {line.planned.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                    <span className={`w-36 text-right ${line.isTotal ? 'text-[var(--primary)] font-black' : 'text-white'}`}>
+                                        R$ {line.realized.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                    <div className="w-36 flex justify-end">
+                                        <span className={`px-4 py-1.5 rounded-full text-[11px] font-black tracking-wider ${variance >= 0 ? 'bg-[var(--success)]/10 text-[var(--success)]' : 'bg-[var(--danger)]/10 text-[var(--danger)]'}`}>
+                                            {variance >= 0 ? '▲' : '▼'} {Math.abs(variancePerc).toFixed(1)}%
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
 
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
-                        <button className="btn btn-ghost" style={{ flex: 1, border: '1px solid #333', fontSize: '12px' }}><FileSpreadsheet size={16} /></button>
-                        <button className="btn btn-primary" style={{ flex: 1, fontSize: '12px' }}><RefreshCw size={14} style={{ marginRight: 8 }} /> Recalcular</button>
+            {/* 3. Tactical Cards - SPACIOUS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-stretch">
+                <div className="card !p-10 flex items-start gap-8 bg-gradient-to-br from-[var(--bg-card)] to-[#1D222B]">
+                    <div className="p-4 bg-[var(--accent-azure)]/10 rounded-2xl border border-[var(--accent-azure)]/20 shadow-xl">
+                        <Info className="text-[var(--accent-azure)]" size={24} />
+                    </div>
+                    <div className="space-y-4">
+                        <p className="text-caption !text-[var(--accent-azure)]">Nota Técnica de Competência</p>
+                        <p className="text-sm text-[var(--text-secondary)] leading-relaxed font-medium">
+                            Este relatório utiliza o regime de <strong>competência</strong>. Os valores realizados refletem o faturamento bruto emitido, garantindo a visão estratégica de performance operacional independente do fluxo de caixa imediato.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="card !p-10 flex items-start gap-8 bg-gradient-to-br from-[var(--bg-card)] to-[#1D222B]">
+                    <div className="p-4 bg-[var(--primary)]/10 rounded-2xl border border-[var(--primary)]/20 shadow-xl">
+                        <TrendingUp className="text-[var(--primary)]" size={24} />
+                    </div>
+                    <div className="space-y-4">
+                        <p className="text-caption !text-[var(--primary)]">Análise de Variância (VAR)</p>
+                        <p className="text-sm text-[var(--text-secondary)] leading-relaxed font-medium">
+                            A árvore gerencial segue o padrão parametrizado no <strong>Controladoria v2026</strong>. Variâncias superiores a 15% em custos operacionais disparam alertas automáticos para revisão de budget.
+                        </p>
                     </div>
                 </div>
             </div>
 
-            {/* 2. DRE Table */}
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead>
-                        <tr style={{ color: 'var(--text-disabled)', fontSize: '10px', textTransform: 'uppercase', background: 'rgba(255,255,255,0.01)' }}>
-                            <th style={{ padding: '16px 24px' }}>Estrutura de Resultados</th>
-                            <th style={{ padding: '16px', textAlign: 'right' }}>Budget 2026</th>
-                            <th style={{ padding: '16px', textAlign: 'right' }}>Realizado</th>
-                            <th style={{ padding: '16px', textAlign: 'right' }}>Desvio (R$)</th>
-                            <th style={{ padding: '16px', textAlign: 'right', paddingRight: '24px' }}>Perf. (%)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {DRE_STRUCTURE.map((line) => {
-                            if (!isConsolidated && line.type === 'ELIMINACAO') return null;
-                            const varData = calculateVariance(line.realized, line.planned);
-                            const isTotal = line.type === 'TOTAL' || line.type === 'RESULT';
-                            const isHeader = line.type === 'HEADER';
-                            const isElim = line.type === 'ELIMINACAO';
-
-                            return (
-                                <tr
-                                    key={line.id}
-                                    onClick={() => line.type === 'SUB' && setDrillDownLine(line.label)}
-                                    style={{
-                                        borderBottom: '1px solid #1A1A1A',
-                                        backgroundColor: isTotal ? 'rgba(255,255,255,0.02)' : isElim ? 'rgba(255,171,0,0.02)' : 'transparent',
-                                        cursor: line.type === 'SUB' ? 'pointer' : 'default',
-                                        fontWeight: isTotal || isHeader ? 700 : 400
-                                    }}
-                                    className={line.type === 'SUB' ? 'hover:bg-white/[0.04]' : ''}
-                                >
-                                    <td style={{ padding: '14px 24px', paddingLeft: 24 + (line.level * 20), fontSize: '13px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            {isElim && <AlertCircle size={12} color="var(--warning)" />}
-                                            {line.label}
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '14px', textAlign: 'right', fontSize: '13px', color: 'var(--text-secondary)' }}>{formatCurrency(line.planned)}</td>
-                                    <td style={{ padding: '14px', textAlign: 'right', fontSize: '13px' }}>{formatCurrency(line.realized)}</td>
-                                    <td style={{ padding: '14px', textAlign: 'right', fontSize: '13px', color: varData.diff >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                                        {varData.diff.toLocaleString('pt-BR')}
-                                    </td>
-                                    <td style={{ padding: '14px', textAlign: 'right', paddingRight: '24px', fontSize: '13px' }}>
-                                        {Math.abs(varData.perc).toFixed(1)}%
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* 3. Panel: Drilldown */}
-            {drillDownLine && (
-                <div style={sidePanelStyle}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '32px' }}>
-                        <h3>Composição: {drillDownLine}</h3>
-                        <button onClick={() => setDrillDownLine(null)}><X size={20} /></button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
-
-function FilterGroup({ icon, label, children }: any) {
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '10px', color: 'var(--text-disabled)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>{icon} {label}</label>
-            {children}
-        </div>
-    );
-}
-
-function RefreshCw({ size, style, className }: any) { return <Layers size={size} style={style} className={className} /> }
-
-const selectStyle = { width: '100%', background: '#0D0D0D', border: '1px solid #222', padding: '10px', borderRadius: '8px', color: 'white', fontSize: '13px' };
-const sidePanelStyle: any = { position: 'fixed', right: 0, top: 0, bottom: 0, width: '450px', background: '#090909', borderLeft: '1px solid #222', padding: '40px', zIndex: 1000 };

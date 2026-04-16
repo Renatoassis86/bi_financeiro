@@ -1,102 +1,184 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
-    LayoutDashboard,
-    TrendingUp,
-    PieChart,
-    ArrowRightLeft,
-    Layers,
-    ShoppingCart,
-    Target,
-    Table,
-    LineChart,
-    Upload,
-    Shield,
-    Bell,
-    Users,
-    FileText,
-    Settings,
-    Briefcase,
-    Plus,
-    BarChart3
+    LayoutDashboard, BarChart3, Brain, LineChart,
+    ArrowUpRight, CreditCard, Landmark, Calculator,
+    ListTree, ArrowRightLeft, Briefcase, ShoppingCart,
+    Shield, Settings, Users, LogOut, Upload
 } from 'lucide-react';
 
-const MENU_ITEMS = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Fluxo de Caixa', path: '/fluxo-caixa', icon: TrendingUp },
-    { name: 'DRE Gerencial', path: '/relatorios/dre', icon: Layers },
-    { name: 'Plan. Estratégico', path: '/orcamento/planejamento-estrategico', icon: Target },
-    { name: 'Plan. Tático', path: '/orcamento/planejamento-tatico', icon: Table },
-    { name: 'Remanejamento', path: '/orcamento/remanejamento', icon: ArrowRightLeft },
-    { name: 'Empenho', path: '/empenho', icon: Briefcase },
-    { name: 'Suprimentos', path: '/compras', icon: ShoppingCart },
-    { name: 'Cadastros', path: '/cadastros', icon: Users },
-    { name: 'Alertas', path: '/alertas', icon: Bell },
-    { name: 'Forecast', path: '/forecast', icon: LineChart },
-    { name: 'Importação', path: '/importacao', icon: Upload },
-    { name: 'Segurança', path: '/seguranca', icon: Shield },
-    { name: 'Glossário BI', path: '/bi', icon: BarChart3 },
-    { name: 'Relatórios', path: '/relatorios', icon: FileText },
+const SECTIONS = [
+    {
+        title: 'ESTRATÉGIA E BI',
+        items: [
+            { name: 'Dashboard', path: '/', icon: LayoutDashboard, color: 'var(--primary)' },
+            { name: 'Consolidado BI', path: '/orcamento/consolidado', icon: BarChart3, color: 'var(--accent-azure)' },
+            { name: 'Relatórios DRE', path: '/relatorios/dre', icon: Calculator, color: 'var(--accent-azure)' },
+        ]
+    },
+    {
+        title: 'GESTÃO FINANCEIRA',
+        items: [
+            { name: 'Fluxo de Caixa', path: '/fluxo-caixa', icon: LineChart, color: 'var(--accent-gold)' },
+            { name: 'Contas a Receber', path: '/financeiro/contas-receber', icon: ArrowUpRight, color: 'var(--primary)' },
+            { name: 'Contas a Pagar', path: '/financeiro/contas-pagar', icon: CreditCard, color: 'var(--accent-slate)' },
+            { name: 'Conciliação', path: '/financeiro/conciliacao', icon: Landmark, color: 'var(--accent-azure)' },
+        ]
+    },
+    {
+        title: 'AÇÕES OPERACIONAIS',
+        items: [
+            { name: 'Importador de Dados', path: '/orcamento/importacao-anual', icon: Upload, color: '#F43F5E' },
+        ]
+    },
+    {
+        title: 'CONTROLADORIA',
+        items: [
+            { name: 'Planejamento Estratégico', path: '/orcamento/planejamento-estrategico', icon: Brain, color: 'var(--accent-azure)' },
+            { name: 'Proposta Orçamentária', path: '/orcamento/consolidado', icon: BarChart3, color: 'var(--primary)' },
+            { name: 'Estruturador (Manual)', path: '/orcamento/estruturador', icon: ListTree, color: 'var(--primary)' },
+            { name: 'Remanejamento', path: '/orcamento/remanejamento', icon: ArrowRightLeft, color: 'var(--accent-gold)' },
+        ]
+    },
+    {
+        title: 'ADMINISTRAÇÃO',
+        items: [
+            { name: 'Segurança', path: '/seguranca', icon: Shield, color: 'var(--accent-slate)' },
+            { name: 'Configurações', path: '/settings', icon: Settings, color: 'var(--accent-slate)' },
+        ]
+    }
 ];
 
-export function Sidebar() {
+export default function Sidebar() {
     const pathname = usePathname();
 
+    const router = useRouter();
+
+    const handleLogout = () => {
+        // Limpa o cookie de sessão (Mock ou Real)
+        document.cookie = "cv_finance_user_mock=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        // Redireciona para o login
+        router.push('/login');
+    };
+
     return (
-        <aside className="w-64 bg-[#050505] border-r border-[#1A1A1A] flex flex-col h-screen fixed">
-            <div className="p-6 border-bottom border-[#1A1A1A]">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-light rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                        <TrendingUp className="text-black" size={24} />
-                    </div>
-                    <div>
-                        <h1 className="text-white font-bold text-lg leading-tight">Cidade Viva</h1>
-                        <p className="text-primary text-[10px] font-bold tracking-widest uppercase">Financeiro ++</p>
+        <aside style={{
+            width: 'var(--sidebar-width)',
+            height: '100vh',
+            backgroundColor: 'var(--bg-sidebar)',
+            borderRight: '1px solid var(--border-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            zIndex: 50
+        }}>
+            {/* 1. Header Area (Branding) */}
+            <div style={{ padding: '40px 32px', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <img
+                        src="/logo_email.png"
+                        alt="Cidade Viva"
+                        style={{ height: '36px', width: 'auto', filter: 'brightness(1.2)', objectFit: 'contain' }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '4px', height: '18px', background: 'linear-gradient(to bottom, var(--primary), var(--primary-light))', borderRadius: '4px' }} />
+                        <h2 style={{ fontSize: '15px', fontWeight: 900, color: 'white', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                            Education <span style={{ color: 'var(--primary)', opacity: 0.8 }}>Finance</span>
+                        </h2>
                     </div>
                 </div>
             </div>
 
-            <nav className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
-                {MENU_ITEMS.map((item) => {
-                    const isActive = pathname === item.path || (item.path !== '/' && pathname.startsWith(item.path));
-                    return (
-                        <Link
-                            key={item.path}
-                            href={item.path}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${isActive
-                                    ? 'bg-primary/10 text-primary shadow-sm shadow-primary/5'
-                                    : 'text-gray-400 hover:bg-white/[0.03] hover:text-white'
-                                }`}
-                        >
-                            <item.icon size={20} className={`transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-                            <span className="text-sm font-medium">{item.name}</span>
-                            {isActive && (
-                                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
-                            )}
-                        </Link>
-                    );
-                })}
+            {/* 2. Navigation Area (FLEX COLUMN) */}
+            <nav style={{ flex: 1, padding: '0 20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '40px' }} className="custom-scrollbar">
+                {SECTIONS.map((section) => (
+                    <div key={section.title} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <p style={{ fontSize: '10px', fontWeight: 900, color: 'var(--accent-slate)', letterSpacing: '0.15em', paddingLeft: '12px', textTransform: 'uppercase' }}>
+                            {section.title}
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {section.items.map((item) => {
+                                const isActive = pathname === item.path || (item.path !== '/' && pathname.startsWith(item.path));
+                                return (
+                                    <Link
+                                        key={item.path}
+                                        href={item.path}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '14px',
+                                            padding: '14px 12px',
+                                            borderRadius: '12px',
+                                            color: isActive ? '#FFFFFF' : 'var(--text-muted)',
+                                            backgroundColor: isActive ? 'rgba(16, 185, 129, 0.08)' : 'transparent',
+                                            transition: 'all 0.2s',
+                                            textDecoration: 'none',
+                                            position: 'relative'
+                                        }}
+                                        className="sidebar-link-hover"
+                                    >
+                                        <item.icon
+                                            size={18}
+                                            style={{
+                                                color: isActive ? 'white' : (item.color || 'inherit'),
+                                                opacity: isActive ? 1 : 0.6
+                                            }}
+                                        />
+                                        <span style={{ fontSize: '13px', fontWeight: isActive ? 700 : 500 }}>
+                                            {item.name}
+                                        </span>
+                                        {isActive && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                left: '-12px',
+                                                width: '4px',
+                                                height: '20px',
+                                                backgroundColor: 'var(--primary)',
+                                                borderRadius: '0 4px 4px 0',
+                                                boxShadow: '0 0 10px var(--primary)'
+                                            }} />
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
             </nav>
 
-            <div className="p-4 mt-auto">
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-[#111] to-[#090909] border border-white/[0.03]">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center border border-white/10 overflow-hidden">
-                            <div className="w-full h-full bg-[url('https://api.dicebear.com/7.x/avataaars/svg?seed=Renato')] bg-cover" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-white truncate">Renato Assis</p>
-                            <p className="text-[10px] text-gray-500 truncate">Administrator</p>
-                        </div>
-                        <Settings size={14} className="text-gray-600 cursor-pointer hover:text-white transition-colors" />
+            {/* 3. Profile Area */}
+            <div style={{ padding: '32px 24px', borderTop: '1px solid var(--border-subtle)', marginTop: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Users size={18} className="text-[var(--primary)]" />
                     </div>
-                    <button className="w-full h-8 text-[10px] font-bold tracking-widest uppercase bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors border border-white/5">
-                        Sair do Sistema
-                    </button>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '13px', fontWeight: 700, color: 'white' }}>Renato Assis</p>
+                        <p style={{ fontSize: '10px', color: 'var(--text-disabled)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Chief Manager</p>
+                    </div>
                 </div>
+                <button
+                    onClick={handleLogout}
+                    style={{
+                        width: '100%', padding: '12px', borderRadius: '10px',
+                        border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.02)',
+                        color: 'var(--text-muted)', fontSize: '12px', fontWeight: 700,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
+                    }} className="hover:bg-red-500/10 hover:text-red-400 transition-all">
+                    <LogOut size={14} /> ENCERRAR SESSÃO
+                </button>
             </div>
+
+            <style jsx>{`
+                .sidebar-link-hover:hover {
+                    background-color: rgba(255, 255, 255, 0.03) !important;
+                    color: white !important;
+                }
+            `}</style>
         </aside>
     );
 }

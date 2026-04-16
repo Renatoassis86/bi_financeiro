@@ -12,6 +12,7 @@ import {
     PieChart as RechartsPie, Pie, Cell, ResponsiveContainer,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
+import Link from 'next/link';
 
 const REVENUE_MIX = [
     { name: 'Assinaturas', value: 450000, color: 'var(--primary)' },
@@ -63,13 +64,13 @@ export default function ReceitasPage() {
             {/* 1. Header & Quick Actions */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <h1 className="text-h1">Gestão de Receitas</h1>
-                    <p className="text-body">Faturamento por modalidade, produto e frente de trabalho</p>
+                    <h1 className="text-h1">CONTROLE DE FATURAMENTO</h1>
+                    <p className="text-body">Monitoramento de recebíveis, adimplência e fluxos de caixa de entrada</p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                    <button onClick={() => setActiveSidePanel('IMPORT')} className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <FileSpreadsheet size={16} /> Importar Recebíveis
-                    </button>
+                    <Link href="/receitas/importacao" className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-subtle)' }}>
+                        <FileSpreadsheet size={16} /> Importar Receitas
+                    </Link>
                     <button onClick={() => { setActiveSidePanel('NEW'); setBillingType('UNICA'); }} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Plus size={18} /> Novo Lançamento
                     </button>

@@ -1,266 +1,180 @@
 'use client';
 
-import { useMemo } from 'react';
 import {
-  TrendingUp, TrendingDown, DollarSign, Target,
-  Users, Activity, Wallet, ArrowUpRight, ArrowDownRight,
-  Filter, Calendar, Download, RefreshCw, BarChart2,
-  PieChart as PieIcon, LayoutDashboard, Building2
+  TrendingUp, TrendingDown, Activity, Zap, Target, PieChart as PieIcon,
+  Calculator, ListTree, ArrowRightLeft, CreditCard,
+  Building2, Users, FileText, BarChart3, Globe,
+  MoreHorizontal, ChevronRight, LayoutDashboard, Calendar, Brain,
+  Landmark, BookOpen, SearchCode, ShieldCheck, Filter
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie
+  ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie,
+  LineChart, Line
 } from 'recharts';
 import { useGlobalFilters } from '@/contexts/GlobalFilterContext';
 
-// --- MOCK DATA ---
-
+// --- DATA MODEL (DUMMY BI INSIGHTS) ---
 const PERFORMANCE_DATA = [
-  { month: 'Jan', orçado: 400000, realizado: 380000 },
-  { month: 'Fev', orçado: 420000, realizado: 410000 },
-  { month: 'Mar', orçado: 450000, realizado: 480000 },
-  { month: 'Abr', orçado: 430000, realizado: 415000 },
-  { month: 'Mai', orçado: 480000, realizado: 500000 },
-  { month: 'Jun', orçado: 510000, realizado: 490000 },
+  { name: 'Jan', receita: 4200, meta: 3800, ebitda: 1400, despesa: 2400 },
+  { name: 'Fev', receita: 3500, meta: 3800, ebitda: 1100, despesa: 2100 },
+  { name: 'Mar', receita: 5400, meta: 4200, ebitda: 1900, despesa: 2800 },
+  { name: 'Abr', receita: 4800, meta: 4200, ebitda: 1600, despesa: 2300 },
+  { name: 'Mai', receita: 6200, meta: 5000, ebitda: 2200, despesa: 2900 },
+  { name: 'Jun', receita: 7500, meta: 5500, ebitda: 2800, despesa: 3200 },
+  { name: 'Jul', receita: 6800, meta: 5800, ebitda: 2500, despesa: 3100 },
+  { name: 'Ago', receita: 7200, meta: 6000, ebitda: 2700, despesa: 3300 },
+  { name: 'Set', receita: 8100, meta: 6200, ebitda: 3100, despesa: 3500 },
+  { name: 'Out', receita: 7900, meta: 6500, ebitda: 2900, despesa: 3450 },
+  { name: 'Nov', receita: 8500, meta: 6800, ebitda: 3300, despesa: 3800 },
+  { name: 'Dez', receita: 9200, meta: 7200, ebitda: 3600, despesa: 4100 },
 ];
 
-const REVENUE_BY_FRONT = [
-  { name: 'PAIDEIA', value: 350000, color: 'var(--primary)' },
-  { name: 'OIKOS', value: 120000, color: 'var(--secondary)' },
-  { name: 'BIBLOS', value: 85000, color: '#FFD600' },
-];
-
-const EXPENSE_CATEGORIES = [
-  { category: 'Pessoal', value: 45 },
-  { category: 'Pedagógico', value: 25 },
-  { category: 'Infra', value: 15 },
-  { category: 'Marketing', value: 10 },
-  { category: 'Outros', value: 5 },
+const REVENUE_COMPOSITION = [
+  { name: 'Mensalidades', value: 45, color: 'var(--primary)' },
+  { name: 'Serviços', value: 25, color: 'var(--accent-gold)' },
+  { name: 'Produtos', value: 15, color: 'var(--accent-azure)' },
+  { name: 'Outros', value: 15, color: 'var(--accent-slate)' },
 ];
 
 export default function DashboardExecutivo() {
-  const { filters, user } = useGlobalFilters();
-
-  const metrics = useMemo(() => ({
-    receitaTotal: 580000,
-    receitaVariancia: +4.2,
-    despesaTotal: 415000,
-    despesaVariancia: -1.8,
-    ebitda: 165000,
-    ebitdaMargem: 28.4,
-    freetCashFlow: 92000,
-    execucaoOrcamentaria: 94.5
-  }), []);
+  const { filters } = useGlobalFilters();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div className="reveal space-y-16 w-full pb-20 max-w-[1600px] mx-auto">
 
-      {/* 1. Header & Context */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 className="text-h1">Consolidado Executivo</h1>
-          <p className="text-body">Visão 360º da Saúde Financeira — {filters.front}</p>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '8px 16px', borderRadius: '12px', border: '1px solid #1A1A1A' }}>
-            <Activity size={14} color="var(--success)" className="animate-pulse" />
-            <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>Live Data</span>
+      {/* 1. TOP HEADER (SPACIOUS) */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-[var(--primary)] shadow-[0_0_12px_var(--primary)]" />
+            <span className="text-caption text-[var(--primary)] text-sm">Monitoramento de Performance Gerencial</span>
           </div>
-          <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Download size={18} /> Exportar Board
-          </button>
+          <h1 className="h1">Dashboard <span className="text-[var(--primary)]">Estratégico</span></h1>
+          <p className="text-[var(--text-secondary)] text-lg max-w-2xl font-medium">
+            Consolidado de KPIs, fluxo de caixa e análise multidimensional para suporte à decisão executiva.
+          </p>
         </div>
-      </div>
-
-      {/* 2. Key Performance Indicators (Cards) */}
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-        <MetricCard
-          label="Receita Operacional"
-          value={`R$ ${metrics.receitaTotal.toLocaleString()}`}
-          trend={metrics.receitaVariancia}
-          icon={<TrendingUp size={18} />}
-          color="var(--primary)"
-        />
-        <MetricCard
-          label="Despesa Consolidada"
-          value={`R$ ${metrics.despesaTotal.toLocaleString()}`}
-          trend={metrics.despesaVariancia}
-          icon={<TrendingDown size={18} />}
-          color="var(--danger)"
-          inverseTrend
-        />
-        <MetricCard
-          label="EBITDA (Gerencial)"
-          value={`R$ ${metrics.ebitda.toLocaleString()}`}
-          sublabel={`${metrics.ebitdaMargem}% Margem`}
-          icon={<Activity size={18} />}
-          color="var(--secondary)"
-        />
-        <MetricCard
-          label="Execução Orçamentária"
-          value={`${metrics.execucaoOrcamentaria}%`}
-          sublabel="Dentro do Limite"
-          icon={<Target size={18} />}
-          color="#FFD600"
-        />
-      </div>
-
-      {/* 3. Main Charts Area */}
-      <div className="grid" style={{ gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
-
-        {/* Trend Chart */}
-        <div className="card" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+        <div className="flex flex-wrap gap-6">
+          <div className="card !py-4 !px-8 border-dashed flex items-center gap-6 bg-white/[0.02]">
             <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700 }}>Performance Real v Planned</h3>
-              <p style={{ fontSize: '12px', color: 'var(--text-disabled)' }}>Comparativo de competência acumulada</p>
+              <p className="text-[10px] font-black text-[var(--text-disabled)] uppercase tracking-widest leading-none">Status de Auditoria</p>
+              <p className="text-sm font-black text-[var(--success)] mt-2">DADOS CONCILIADOS</p>
             </div>
-            <div style={{ display: 'flex', gap: '16px', fontSize: '11px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', background: 'var(--primary)', borderRadius: '2px' }} /> Realizado</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '8px', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px' }} /> Orçado</div>
-            </div>
+            <ShieldCheck className="text-[var(--success)]" size={24} />
           </div>
-          <div style={{ height: '300px', width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={PERFORMANCE_DATA}>
-                <defs>
-                  <linearGradient id="colorReal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1A" vertical={false} />
-                <XAxis dataKey="month" stroke="#444" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="#444" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `R$ ${val / 1000}k`} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#090909', border: '1px solid #222', borderRadius: '8px', fontSize: '12px' }}
-                  itemStyle={{ color: 'white' }}
-                />
-                <Area type="monotone" dataKey="orçado" stroke="#333" fill="rgba(255,255,255,0.02)" strokeWidth={2} />
-                <Area type="monotone" dataKey="realizado" stroke="var(--primary)" fillOpacity={1} fill="url(#colorReal)" strokeWidth={3} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Distribution Chart */}
-        <div className="card" style={{ padding: '24px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '24px' }}>Receita por Frente</h3>
-          <div style={{ height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={REVENUE_BY_FRONT}
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={8}
-                  dataKey="value"
-                >
-                  {REVENUE_BY_FRONT.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#090909', border: '1px solid #222', borderRadius: '8px', fontSize: '12px' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div style={{ position: 'absolute', textAlign: 'center' }}>
-              <p style={{ fontSize: '10px', color: 'var(--text-disabled)', textTransform: 'uppercase' }}>Total</p>
-              <p style={{ fontSize: '18px', fontWeight: 'bold' }}>R$ 555k</p>
-            </div>
-          </div>
-          <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {REVENUE_BY_FRONT.map(item => (
-              <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
-                  <div style={{ width: '8px', height: '8px', background: item.color, borderRadius: '2px' }} />
-                  {item.name}
-                </div>
-                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>R$ {(item.value / 1000).toFixed(0)}k</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Secondary Breakdown & Alerts */}
-      <div className="grid" style={{ gridTemplateColumns: '1.2fr 1.8fr', gap: '24px' }}>
-
-        <div className="card" style={{ padding: '24px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '20px' }}>Composição de Despesas</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {EXPENSE_CATEGORIES.map(ex => (
-              <div key={ex.category}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '11px' }}>
-                  <span>{ex.category}</span>
-                  <span style={{ color: 'var(--text-disabled)' }}>{ex.value}%</span>
-                </div>
-                <div style={{ height: '4px', background: '#111', borderRadius: '2px', overflow: 'hidden' }}>
-                  <div style={{ width: ex.value + '%', height: '100%', background: 'var(--secondary)' }} />
-                </div>
-              </div>
-            ))}
-          </div>
-          <button className="btn btn-ghost" style={{ width: '100%', marginTop: '24px', fontSize: '11px', border: '1px solid #1A1A1A' }}>
-            Ver Drilldown Analítico <ArrowUpRight size={12} style={{ marginLeft: 6 }} />
+          <button className="btn btn-primary !px-12 !font-black !text-xs group shadow-xl">
+            SINCRONIZAR BI <ChevronRight size={16} className="ml-3 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
+      </div>
 
-        <div className="card" style={{ padding: '24px', borderLeft: '4px solid var(--warning)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 700 }}>Alertas de Controladoria (High Risk)</h3>
-            <span style={{ fontSize: '10px', background: 'rgba(255,171,0,0.1)', color: 'var(--warning)', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>3 Pendentes</span>
+      {/* 2. KPI GRID (HIGH CONTRAST & AIRY) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+        {[
+          { label: 'RECEITA LÍQUIDA', val: 'R$ 8.52M', trend: '+14.2%', icon: TrendingUp, color: 'var(--primary)' },
+          { label: 'EBITDA OPERACIONAL', val: 'R$ 1.15M', trend: '+5.4%', icon: Zap, color: 'var(--accent-azure)' },
+          { label: 'MARGEM LÍQUIDA', val: '22.8%', trend: '+1.1%', icon: Target, color: 'var(--success)' },
+          { label: 'OPEX / CAPEX', val: '3.42x', trend: '-2.5%', icon: Activity, color: 'var(--accent-gold)' },
+        ].map((kpi, idx) => (
+          <div key={idx} className="card group bg-gradient-to-br from-[var(--bg-card)] to-[#1D222B]">
+            <div className="flex justify-between items-center mb-8">
+              <div className="p-4 bg-white/5 rounded-2xl group-hover:bg-[var(--primary)]/10 transition-colors">
+                <kpi.icon size={24} style={{ color: kpi.color }} />
+              </div>
+              <span className={`text-xs font-black p-2 rounded-lg bg-white/5 ${kpi.trend.startsWith('+') ? 'text-[var(--success)]' : 'text-[var(--text-disabled)]'}`}>
+                {kpi.trend}
+              </span>
+            </div>
+            <p className="text-[10px] font-black text-[var(--text-disabled)] uppercase tracking-[0.2em] mb-2">{kpi.label}</p>
+            <h3 className="text-4xl font-black text-white tracking-tighter">{kpi.val}</h3>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <AlertRow title="Estouro de Orçamento: Marketing PAIDEIA" desc="Superou +15% do orçado para o Q1 devido a Google Ads." />
-            <AlertRow title="Inadimplência Projetada (+5%)" desc="Previsão de aumento em Biblos Educação devido a atrasos bancários." />
-            <AlertRow title="Empenho s/ Justificativa" desc="Solicitação EMP-088 aguardando documento de suporte." />
+        ))}
+      </div>
+
+      {/* 3. MAIN ANALYTICS ROW (SPACIOUS) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        <div className="lg:col-span-8">
+          <div className="card h-[600px] flex flex-col">
+            <div className="flex justify-between items-center mb-12">
+              <div>
+                <h3 className="h3">Performance Multidimensional</h3>
+                <p className="text-sm font-medium text-[var(--text-disabled)] mt-2">Projeção YTD vs Realizado vs Meta</p>
+              </div>
+              <div className="flex gap-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-[var(--primary)]" />
+                  <span className="text-[10px] font-black text-white/60 uppercase">Real</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-[var(--accent-azure)]" />
+                  <span className="text-[10px] font-black text-white/60 uppercase">Alvo</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 w-full mt-auto">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={PERFORMANCE_DATA}>
+                  <defs>
+                    <linearGradient id="chartColor" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                  <XAxis dataKey="name" stroke="rgba(255,255,255,0.2)" fontSize={12} axisLine={false} tickLine={false} dy={15} />
+                  <YAxis stroke="rgba(255,255,255,0.2)" fontSize={12} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${v / 1000}k`} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}
+                    itemStyle={{ fontSize: '12px', fontWeight: '800' }}
+                  />
+                  <Area type="monotone" dataKey="receita" stroke="var(--primary)" strokeWidth={4} fill="url(#chartColor)" />
+                  <Line type="monotone" dataKey="meta" stroke="var(--accent-azure)" strokeWidth={3} dot={{ r: 5, fill: 'var(--bg-card)', stroke: 'var(--accent-azure)', strokeWidth: 3 }} strokeDasharray="8 6" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
-      </div>
-
-    </div>
-  );
-}
-
-function MetricCard({ label, value, trend, sublabel, icon, color, inverseTrend }: any) {
-  const isPositive = trend > 0;
-  const trendColor = inverseTrend
-    ? (isPositive ? 'var(--danger)' : 'var(--success)')
-    : (isPositive ? 'var(--success)' : 'var(--danger)');
-
-  return (
-    <div className="card" style={{ padding: '24px', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: `${color}10`, color: color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {icon}
-        </div>
-        {trend && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 'bold', color: trendColor }}>
-            {isPositive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-            {Math.abs(trend)}%
+        <div className="lg:col-span-4 space-y-12">
+          <div className="card h-[340px] flex flex-col items-center">
+            <h4 className="text-xs font-black text-white uppercase tracking-widest mb-10">Resumo de Receita</h4>
+            <div className="h-[180px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={REVENUE_COMPOSITION} innerRadius={60} outerRadius={85} paddingAngle={8} dataKey="value" stroke="none">
+                    {REVENUE_COMPOSITION.map((e, i) => <Cell key={i} fill={e.color} />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="grid grid-cols-2 gap-x-12 gap-y-4 mt-8 w-full border-t border-white/5 pt-6">
+              {REVENUE_COMPOSITION.map(item => (
+                <div key={item.name} className="flex items-center gap-3">
+                  <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: item.color }} />
+                  <span className="text-[10px] font-bold text-[var(--text-disabled)] uppercase truncate">{item.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
-      <p style={{ fontSize: '11px', color: 'var(--text-disabled)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>{label}</p>
-      <h2 style={{ fontSize: '24px', fontWeight: 900, marginTop: '4px' }}>{value}</h2>
-      {sublabel && <p style={{ fontSize: '11px', color: 'var(--text-disabled)', marginTop: '4px' }}>{sublabel}</p>}
 
-      {/* Background Decoration */}
-      <div style={{ position: 'absolute', right: '-10px', bottom: '-10px', opacity: 0.03, color: color }}>
-        {icon && <div style={{ transform: 'scale(4)' }}>{icon}</div>}
+          <div className="card h-[210px] relative overflow-hidden flex flex-col justify-center gap-6 border-l-4 border-l-[var(--primary)] bg-gradient-to-r from-[var(--primary)]/5 to-transparent">
+            <div className="flex items-center gap-6">
+              <div className="w-14 h-14 rounded-2xl bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/20">
+                <Brain className="text-[var(--primary)]" size={28} />
+              </div>
+              <div>
+                <h5 className="text-[11px] font-black text-[var(--primary)] uppercase tracking-widest">Predicção de Fluxo</h5>
+                <p className="text-sm font-medium text-white/80 mt-2 leading-relaxed">
+                  Cenário otimista com <strong className="text-white">ROI de 22%</strong> para expansão da infraestrutura bibliotecária em Q3.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  );
-}
 
-function AlertRow({ title, desc }: any) {
-  return (
-    <div style={{ padding: '12px', background: 'rgba(255,255,255,0.01)', borderRadius: '8px', border: '1px solid #1A1A1A' }}>
-      <p style={{ fontSize: '12px', fontWeight: 700, marginBottom: '2px' }}>{title}</p>
-      <p style={{ fontSize: '11px', color: 'var(--text-disabled)' }}>{desc}</p>
     </div>
   );
 }

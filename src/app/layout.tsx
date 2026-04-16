@@ -1,21 +1,21 @@
 import type { Metadata } from "next";
-import { Outfit } from "next/font/google"; // Import Outfit
+import { Inter } from "next/font/google"; // 100% Sans-Serif
 import "./globals.css";
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
+import { GlobalFilterProvider } from '@/contexts/GlobalFilterContext';
 
-const outfit = Outfit({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-outfit",
+  variable: "--font-inter",
   display: "swap",
+  weight: ['300', '400', '500', '600', '700', '800', '900']
 });
 
 export const metadata: Metadata = {
   title: "Cidade Viva Finance",
-  description: "Sistema de Gestão Financeira Integrada (ERP + BI)",
+  description: "ERP + BI Inteligente para Gestão Educacional",
 };
-
-import { GlobalFilterProvider } from '@/contexts/GlobalFilterContext';
 
 export default function RootLayout({
   children,
@@ -24,28 +24,28 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={outfit.className}>
+      <body className={`${inter.variable} antialiased`}>
         <GlobalFilterProvider>
-          <div style={{ display: 'flex', minHeight: '100vh' }}>
-            {/* Sidebar Area */}
-            <div style={{ width: 'var(--sidebar-width)', flexShrink: 0 }}>
+          <div className="app-wrapper">
+
+            {/* 1. Sidebar (Fixed Left) */}
+            <div className="sidebar-container">
               <Sidebar />
             </div>
 
-            {/* Main Area */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {/* 2. Main Viewport (Right Column) */}
+            <div className="main-viewport">
+
+              {/* 3. Topbar (Header Integration) */}
               <Topbar />
-              {/* Content Scrollable */}
-              <main style={{
-                flex: 1,
-                padding: '32px',
-                backgroundColor: 'var(--bg-main)',
-                overflowY: 'auto',
-                marginTop: 'var(--topbar-height)' // Adjusted for fixed topbar
-              }}>
+
+              {/* 4. Scrollable Data Area */}
+              <main className="scroll-area custom-scrollbar">
                 {children}
               </main>
+
             </div>
+
           </div>
         </GlobalFilterProvider>
       </body>
