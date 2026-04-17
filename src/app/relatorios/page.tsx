@@ -1,15 +1,15 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import {
     Download, FileSpreadsheet, FileText, Filter, Calendar,
     ArrowUpRight, TrendingUp, Info, Printer, Share2,
-    ChevronDown, ChevronRight, PieChart, BarChart3, LineChart,
+    ChevronDown, ChevronRight, PieChart as PieIcon, BarChart3, LineChart as LineIcon,
     LayoutGrid, Building2, Package, Search
 } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-    LineChart as RechartsLine, Line, AreaChart, Area
+    LineChart, Line, AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts';
 
 const DRE_ROWS = [
@@ -254,7 +254,14 @@ export default function RelatoriosPage() {
     );
 }
 
-function NavButton({ active, label, icon, onClick }: any) {
+interface NavButtonProps {
+    active: boolean;
+    label: string;
+    icon: React.ReactNode;
+    onClick: () => void;
+}
+
+function NavButton({ active, label, icon, onClick }: NavButtonProps) {
     return (
         <button
             onClick={onClick}

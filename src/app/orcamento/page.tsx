@@ -20,14 +20,14 @@ const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', '
 export default function OrçamentoPage() {
     const [status, setStatus] = useState<'RASCUNHO' | 'APROVADO' | 'BLOQUEADO'>('RASCUNHO');
     const [version, setVersion] = useState('Versão Inicial 2026');
-    const [data, setData] = useState<any>({});
+    const [data, setData] = useState<Record<string, Record<string, number>>>({});
     const [showHistory, setShowHistory] = useState(false);
 
     // Initialize empty grid data
     useEffect(() => {
-        const initialData: any = {};
+        const initialData: Record<string, Record<string, number>> = {};
         ACCOUNTS.forEach(acc => {
-            initialData[acc.id] = MONTHS.reduce((accMonth: any, month) => {
+            initialData[acc.id] = MONTHS.reduce((accMonth: Record<string, number>, month) => {
                 accMonth[month] = 0;
                 return accMonth;
             }, {});
@@ -38,7 +38,7 @@ export default function OrçamentoPage() {
     const handleCellChange = (accId: string, month: string, value: string) => {
         if (status !== 'RASCUNHO') return;
         const numericValue = parseFloat(value.replace(/\D/g, '')) || 0;
-        setData((prev: any) => ({
+        setData((prev: Record<string, Record<string, number>>) => ({
             ...prev,
             [accId]: {
                 ...prev[accId],
@@ -47,8 +47,9 @@ export default function OrçamentoPage() {
         }));
     };
 
-    const getAccountTotal = (accId: string) => {
-        return Object.values(data[accId] || {}).reduce((sum: any, val: any) => sum + val, 0);
+    const getAccountTotal = (accId: string): number => {
+        const accountValues = data[accId] ? Object.values(data[accId]) : [];
+        return accountValues.reduce((sum: number, val: number) => sum + val, 0);
     };
 
     const distributeAnnualValue = (accId: string) => {
@@ -195,13 +196,13 @@ export default function OrçamentoPage() {
                                 ))}
 
                                 <td style={{ padding: '16px 24px', textAlign: 'right', fontWeight: 'bold', borderLeft: '1px solid var(--border-subtle)' }}>
-                                    R$ {getAccountTotal(acc.id).toLocaleString()}
+                                    R$ {(getAccountTotal(acc.id) as number).toLocaleString()}
                                 </td>
 
                                 <td style={{ padding: '16px' }}>
                                     <div style={{ display: 'flex', gap: '8px', opacity: 0.3 }} className="row-actions">
-                                        <Split onClick={() => distributeAnnualValue(acc.id)} size={16} style={{ cursor: 'pointer' }} title="Distribuir Valor" />
-                                        <Copy onClick={() => copyRow(acc.id)} size={16} style={{ cursor: 'pointer' }} title="Copiar Linha" />
+                                        <Split onClick={() => distributeAnnualValue(acc.id)} size={16} style={{ cursor: 'pointer' }} />
+                                        <Copy onClick={() => copyRow(acc.id)} size={16} style={{ cursor: 'pointer' }} />
                                     </div>
                                 </td>
                             </tr>
@@ -211,8 +212,14 @@ export default function OrçamentoPage() {
                         <tr style={{ borderTop: '2px solid #333', backgroundColor: 'rgba(255,255,255,0.03)' }}>
                             <td style={{ padding: '20px 24px', fontWeight: 'bold' }}>SALDO PROJETADO</td>
                             {MONTHS.map(month => {
-                                const totalReceita = ACCOUNTS.filter(a => a.type === 'RECEITA').reduce((sum, a) => sum + (data[a.id]?.[month] || 0), 0);
-                                const totalDespesa = ACCOUNTS.filter(a => a.type === 'DESPESA').reduce((sum, a) => sum + (data[a.id]?.[month] || 0), 0);
+                                const totalReceita = ACCOUNTS.filter(a => a.type === 'RECEITA').reduce((sum: number, a) => {
+                                    const val = data[a.id]?.[month] || 0;
+                                    return sum + val;
+                                }, 0);
+                                const totalDespesa = ACCOUNTS.filter(a => a.type === 'DESPESA').reduce((sum: number, a) => {
+                                    const val = data[a.id]?.[month] || 0;
+                                    return sum + val;
+                                }, 0);
                                 const saldo = totalReceita - totalDespesa;
                                 return (
                                     <td key={month} style={{ padding: '16px', textAlign: 'right', fontWeight: 'bold', color: saldo >= 0 ? 'var(--success)' : 'var(--danger)' }}>
@@ -256,7 +263,13 @@ export default function OrçamentoPage() {
     );
 }
 
-function AuditLine({ user, action, time }: any) {
+interface AuditLineProps {
+    user: string;
+    action: string;
+    time: string;
+}
+
+function AuditLine({ user, action, time }: AuditLineProps) {
     return (
         <div style={{ borderBottom: '1px solid #222', paddingBottom: '16px' }}>
             <p style={{ fontSize: '13px', fontWeight: 600 }}>{action}</p>

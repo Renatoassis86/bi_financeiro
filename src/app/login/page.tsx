@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -16,18 +17,32 @@ export default function LoginPage() {
         setLoading(true);
         setError('');
 
-        // Simulação de delay para efeito dramático
-        setTimeout(() => {
+        try {
+            // 1. Tenta autenticação real com Supabase
+            const { data, error: authError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            if (data?.user) {
+                router.push('/');
+                router.refresh();
+                return;
+            }
+
+            // 2. Fallback para Mock (Usuário Administrativo de Emergência)
             if (email === 'renato.consultoria@cidadeviva.org' && password === 'renatoadmin2026') {
-                // Set mock session cookie for middleware
                 document.cookie = "cv_finance_user_mock=true; path=/; max-age=86400";
                 router.push('/');
                 router.refresh();
             } else {
-                setError('Credenciais inválidas para o ambiente de BI.');
+                setError(authError?.message || 'Credenciais inválidas para o ambiente de BI.');
                 setLoading(false);
             }
-        }, 1200);
+        } catch (err) {
+            setError('Falha na conexão com o servidor de segurança.');
+            setLoading(false);
+        }
     };
 
     return (

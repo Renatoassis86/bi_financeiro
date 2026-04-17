@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google"; // 100% Sans-Serif
 import "./globals.css";
-import Sidebar from '@/components/layout/Sidebar';
-import Topbar from '@/components/layout/Topbar';
+import ContentLayout from '@/components/layout/ContentLayout';
 import { GlobalFilterProvider } from '@/contexts/GlobalFilterContext';
 
 const inter = Inter({
@@ -26,29 +25,12 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className={`${inter.variable} antialiased`}>
         <GlobalFilterProvider>
-          <div className="app-wrapper">
-
-            {/* 1. Sidebar (Fixed Left) */}
-            <div className="sidebar-container">
-              <Sidebar />
-            </div>
-
-            {/* 2. Main Viewport (Right Column) */}
-            <div className="main-viewport">
-
-              {/* 3. Topbar (Header Integration) */}
-              <Topbar />
-
-              {/* 4. Scrollable Data Area */}
-              <main className="scroll-area custom-scrollbar">
-                {children}
-              </main>
-
-            </div>
-
-          </div>
+          <ContentLayout>
+            {children}
+          </ContentLayout>
         </GlobalFilterProvider>
       </body>
     </html>
   );
 }
+
